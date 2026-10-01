@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.3
+
+- Marketplace-friendly **plugin variables**: declare `variables` on `.grok-plugin/plugin.json` (and sync root / `.cursor-plugin`); `DISCORD_BOT_TOKEN` required; optional `DISCORD_GUILD_ID`, `DISCORD_BRIDGE_HEALTH_URL`
+- Docs: each installer uses **their own** Discord bot token / guild; Matthew vault `DISCORD_FLEET_WAKE` is operator-only — not a shared provider; users are not joining Matthew's Discord/infra
+- Skill `discord-fleet-bridge-setup`: prefer plugin vars / vault→runtime env; discourage plaintext `.env` when avoidable; optional self-host for **their** machine/guild
+- Skill `discord-fleet-boundary` (+ status): clarify per-installer credentials vs Matthew-operator path
+
 ## 0.3.2
 
 - Skill `discord-fleet-bridge-setup`: short Windows vs Linux operator notes (same env vars; SSH/WSL tunnel to servergen1 `127.0.0.1:18083/healthz`; wake path Linux-only; Windows local smoke only; no curl|bash; no secrets in git)

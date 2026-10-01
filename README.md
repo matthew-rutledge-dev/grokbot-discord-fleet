@@ -2,27 +2,28 @@
 
 Plugin home for **Discord fleet manage/status** MCP servers + skills. Aligned for **Grok Build** (xAI plugin marketplace conventions) with optional Cursor dual-support.
 
-**This is NOT the wake path.** Runtime wake (Zion Gateway → `sendPrompt` / webhook) lives in a separate repo:
+**This is NOT the wake path.** Runtime wake (Gateway → `sendPrompt` / webhook) lives in a separate repo you may optionally self-host:
 
-- Bridge: [matthew-rutledge-dev/grok-bot-discord-bridge](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge)
-- Host hint (servergen1, Diablo owns): `/opt/sites/discord-fleet-wake`
+- Bridge (optional, your machine): [matthew-rutledge-dev/grok-bot-discord-bridge](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge)
 
-Do not merge this plugin into the general/Betty catalog. Do not put secrets in git. Do not deploy to the wake path from this plugin.
+**Marketplace installers are not joining Matthew's Discord or infra.** You configure **your own** Discord bot token (and optional guild / self-hosted bridge URL) via plugin variables. Matthew's host vault (`DISCORD_FLEET_WAKE`) and servergen1 wake path are **operator-only** for Matthew's own fleet — not a shared provider.
+
+Do not merge this plugin into the general/Betty catalog. Do not put secrets in git. Do not deploy to someone else's wake path from this plugin.
 
 ## What this plugin is
 
 | Piece | Role |
 |-------|------|
-| `discord-fleet-status` MCP | Bridge `GET /healthz` probe + Discord REST identity/guild/channel reads |
+| `discord-fleet-status` MCP | Optional bridge `GET /healthz` probe + Discord REST identity/guild/channel reads |
 | `discord-fleet-manage` MCP | Boundary docs, dry-run channel-map plans, gated read helpers (`confirm=true`) |
-| Skills | Boundary, status, manage planning, operator-driven bridge setup |
+| Skills | Boundary, status, manage planning, operator-driven optional bridge setup |
 
 ## Layout (Grok-canonical)
 
 | Path | Purpose |
 |------|---------|
-| `.grok-plugin/plugin.json` | **Primary** Grok Build / marketplace manifest |
-| `.mcp.json` | MCP servers for Grok (catalog default name) |
+| `.grok-plugin/plugin.json` | **Primary** Grok Build / marketplace manifest (includes `variables`) |
+| `.mcp.json` | MCP servers for Grok (catalog default name); env maps `${DISCORD_*}` |
 | `skills/` | Skill folders with `SKILL.md` |
 | `mcp/status`, `mcp/manage` | Local stdio MCP TypeScript sources |
 | `.cursor-plugin/plugin.json` + `mcp.json` | Optional Cursor dual-support |
@@ -40,7 +41,7 @@ grok plugin marketplace list
 grok plugin install grokbot-discord-fleet --trust
 ```
 
-Marketplace remote entries must pin a full 40-character commit SHA (this repo's `main` tip after alignment).
+Then set **plugin variables** (below) to **your** Discord bot token — not anyone else's. Marketplace remote entries must pin a full 40-character commit SHA.
 
 ### From this repo now (before marketplace PR)
 
@@ -53,7 +54,7 @@ git clone https://github.com/matthew-rutledge-dev/grokbot-discord-fleet.git ~/.g
 # or: grok --plugin-dir /path/to/grokbot-discord-fleet …
 ```
 
-If your Grok Build build supports installing a local/git path via `grok plugin install`, prefer that over hand-copy; otherwise use the directory layout above. Set env vars (below) before starting Grok.
+If your Grok Build build supports installing a local/git path via `grok plugin install`, prefer that over hand-copy; otherwise use the directory layout above. Configure plugin variables / env (below) before starting Grok.
 
 ### Cursor (optional dual-support)
 
@@ -63,24 +64,37 @@ cp -a /path/to/grokbot-discord-fleet ~/.cursor/plugins/local/grokbot-discord-fle
 # or: ln -s /path/to/grokbot-discord-fleet ~/.cursor/plugins/local/grokbot-discord-fleet
 ```
 
-Cursor uses `.cursor-plugin/plugin.json` and `mcp.json` (`${CURSOR_PLUGIN_ROOT}`).
+Cursor uses `.cursor-plugin/plugin.json` and `mcp.json` (`${CURSOR_PLUGIN_ROOT}`). Set variables under Plugins → Configure (or equivalent).
 
-## Environment / plugin variables
+## Plugin variables (marketplace-friendly)
 
-| Name | Required | Purpose |
-|------|----------|---------|
-| `DISCORD_BOT_TOKEN` | For Discord REST tools | Bot token. **Never commit.** Host vault key: `DISCORD_FLEET_WAKE` |
-| `DISCORD_GUILD_ID` | Optional | Default guild snowflake (`<guild-id>` placeholder until set) |
-| `DISCORD_BRIDGE_HEALTH_URL` | Optional | Full URL to bridge `GET /healthz` (e.g. `http://127.0.0.1:18083/healthz` via SSH tunnel) |
+Declared in `.grok-plugin/plugin.json`, root `plugin.json`, and `.cursor-plugin/plugin.json` as a JSON Schema `variables` object. MCP configs map them into process env via `${DISCORD_BOT_TOKEN}`, `${DISCORD_GUILD_ID}`, `${DISCORD_BRIDGE_HEALTH_URL}` — **no secret values in the repo**.
 
-Bridge HTTP on the host is loopback-only (`127.0.0.1:18083`). From a laptop, tunnel first, then point `DISCORD_BRIDGE_HEALTH_URL` at the tunneled URL.
+| Name | Required | Who sets it | Purpose |
+|------|----------|-------------|---------|
+| `DISCORD_BOT_TOKEN` | **Yes** (for Discord REST tools) | **Each installer — their own bot** | Bot token from the [Discord Developer Portal](https://discord.com/developers/applications). **Never commit.** |
+| `DISCORD_GUILD_ID` | Optional | Your guild snowflake | Default guild for channel/guild status tools |
+| `DISCORD_BRIDGE_HEALTH_URL` | Optional | Your self-hosted bridge | Full URL to **your** bridge `GET /healthz` (e.g. `http://127.0.0.1:18083/healthz`) |
+
+### Marketplace installers
+
+1. Create **your own** Discord application + bot; invite it to **your** guild.
+2. Set plugin variable `DISCORD_BOT_TOKEN` to that token (Plugins → Configure / host env injection — **prefer vault → runtime env** over plaintext `.env` on disk when avoidable).
+3. Optionally set `DISCORD_GUILD_ID`.
+4. Optionally self-host the wake bridge on **your** machine and set `DISCORD_BRIDGE_HEALTH_URL` (see skill `discord-fleet-bridge-setup`). Skip if you only need Discord REST status/manage.
+
+You are **not** connecting to Matthew's Discord, vault, or provider. Missing token → Discord REST tools report graceful "not configured" messages.
+
+### Matthew operator-only (not for marketplace)
+
+Matthew's own fleet may load the same env names from host vault key `DISCORD_FLEET_WAKE` and probe a loopback bridge on servergen1 (`/opt/sites/discord-fleet-wake`, Diablo owns). That path is **not** part of the marketplace product surface.
 
 ## Network endpoints (declare for operators / marketplace)
 
 | Endpoint | When | Purpose |
 |----------|------|---------|
 | `https://discord.com/api/v10/*` (Discord REST) | When `DISCORD_BOT_TOKEN` is set | Identity, guilds, channels (read-only from this plugin) |
-| Bridge `GET /healthz` at `DISCORD_BRIDGE_HEALTH_URL` | Optional | Liveness / `discordReady` probe — **not** wake / `sendPrompt` |
+| Bridge `GET /healthz` at `DISCORD_BRIDGE_HEALTH_URL` | Optional (your bridge) | Liveness / `discordReady` probe — **not** wake / `sendPrompt` |
 
 No Discord message sends, no channel-map writes, no gateway listen from this plugin.
 
@@ -108,7 +122,7 @@ Do **not** assume `${CURSOR_PLUGIN_ROOT}` works under Grok, or `${GROK_PLUGIN_RO
 - `inspect_guild` — Discord REST guild/roles/channels snapshot; requires `confirm=true`
 - `resolve_channel` — Discord REST `GET /channels/{id}`; requires `confirm=true`
 
-## Bridge HTTP (reference — SoT on host)
+## Bridge HTTP (reference — optional self-host)
 
 From bridge README / `http-server.ts` (read-only reference repo):
 
@@ -117,12 +131,14 @@ From bridge README / `http-server.ts` (read-only reference repo):
 | `/healthz` | GET | Liveness + `discordReady` / `hasTokenConfigured` |
 | `/callback` | POST | Agent → Discord delivery (Bearer `CALLBACK_TOKEN`) — **not used by this plugin** |
 
+Typical self-host listens loopback-only (`127.0.0.1:18083`). Point `DISCORD_BRIDGE_HEALTH_URL` at that URL (or a local SSH tunnel end).
+
 ## Skills
 
-- `discord-fleet-boundary` — always on for fleet work; manage/status vs wake path
+- `discord-fleet-boundary` — always on for fleet work; manage/status vs wake path; **per-installer credentials, not shared provider**
 - `discord-fleet-status` — health/status checks via status MCP
 - `discord-fleet-manage` — channel-binding plans / gated inspect (dry-run / confirm)
-- `discord-fleet-bridge-setup` — **operator-driven** wake-bridge setup on an explicit ask (clone/deploy/verify `/healthz`; never silent postinstall; never `curl|bash`; vault `DISCORD_FLEET_WAKE`). Skill includes short **Windows vs Linux** notes: same env vars; SSH/WSL tunnel from Windows to servergen1 loopback `:18083`; host path `/opt/sites/discord-fleet-wake` is Linux-only; Windows optional for local plugin smoke only.
+- `discord-fleet-bridge-setup` — **operator-driven** optional wake-bridge setup on an explicit ask (clone/deploy/verify `/healthz` on **your** host; never silent postinstall; never `curl|bash`; prefer plugin vars / vault→runtime env over plaintext `.env`). Skill includes short **Windows vs Linux** notes.
 
 ## Marketplace PR (later — not in this change)
 
@@ -131,12 +147,12 @@ To list in `xai-org/plugin-marketplace`, open a PR that appends a **remote** ent
 ```json
 {
   "name": "grokbot-discord-fleet",
-  "description": "Discord fleet manage/status MCP + skills (REST reads + optional bridge /healthz). Not the wake bridge.",
+  "description": "Discord fleet manage/status MCP + skills (REST reads + optional self-hosted bridge /healthz). Installer brings own bot token. Not the wake bridge.",
   "category": "development",
   "source": {
     "source": "url",
     "url": "https://github.com/matthew-rutledge-dev/grokbot-discord-fleet.git",
-    "sha": "<full-40-char-sha-after-this-align-commit>"
+    "sha": "<full-40-char-sha-after-this-commit>"
   },
   "homepage": "https://github.com/matthew-rutledge-dev/grokbot-discord-fleet",
   "keywords": ["discord", "grok-bot", "fleet", "mcp"],
@@ -146,7 +162,7 @@ To list in `xai-org/plugin-marketplace`, open a PR that appends a **remote** ent
 
 ## Secrets
 
-No tokens in git. Use env / host plugin variables only. Host `.env` + vault `DISCORD_FLEET_WAKE` stay on the bridge host.
+No tokens in git. Marketplace users set **plugin variables** (or host env injection from their vault). Prefer vault → runtime env over leaving plaintext `.env` on disk when avoidable. Matthew operator vault key `DISCORD_FLEET_WAKE` is **not** used by marketplace installers.
 
 ## License
 
