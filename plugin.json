@@ -1,0 +1,15 @@
+{
+  "name": "grokbot-discord-fleet",
+  "displayName": "Grok Bot Discord Fleet",
+  "version": "0.1.0",
+  "description": "Manage and status MCP + skills for Matthew's Grok Bot Discord fleet. Not the wake bridge.",
+  "author": { "name": "Matthew Rutledge" },
+  "homepage": "https://github.com/matthew-rutledge-dev/grokbot-discord-fleet",
+  "repository": "https://github.com/matthew-rutledge-dev/grokbot-discord-fleet",
+  "license": "MIT",
+  "keywords": ["discord", "grok-bot", "mcp", "fleet", "status", "manage"],
+  "category": "developer-tools",
+  "tags": ["discord", "mcp", "fleet"],
+  "skills": "./skills/",
+  "mcpServers": "./mcp.json"
+}

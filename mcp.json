@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "discord-fleet-status": {
+      "command": "npx",
+      "args": ["-y", "tsx", "mcp/status/src/index.ts"],
+      "env": {}
+    },
+    "discord-fleet-manage": {
+      "command": "npx",
+      "args": ["-y", "tsx", "mcp/manage/src/index.ts"],
+      "env": {}
+    }
+  }
+}
