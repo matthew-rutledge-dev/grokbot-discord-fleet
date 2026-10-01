@@ -1,13 +1,13 @@
 ---
 name: discord-fleet-hop-shorthand
-description: use this when Discord wake inbound hits a Grok bot, or when preparing callback context — decode/encode short hop ids (d:<slug>:<msgId>)
+description: use this when Discord wake inbound hits a Grok bot, or when preparing callback context — decode/encode short hop ids (d:<slug>:<msgId>); after absorb, show only human content in Grok chat
 ---
 
 # Discord fleet hop shorthand
 
 ## When to use
 
-- Discord wake inbound to a Grok bot (decode the short envelope the bridge minted)
+- Discord wake inbound to a Grok bot (decode the short envelope the bridge minted, then show only human content in chat)
 - Preparing callback / reply context (encode or keep the hop id for threading — never dump it into Discord channel text)
 
 **Bridge mints; this skill decodes for bots.** The wake bridge (`grok-bot-discord-bridge`) builds the inbound prompt. Grok bots use this skill to expand hop ids and keep Discord OUT clean.
@@ -40,16 +40,20 @@ Placeholders only in docs/examples (`ai-gen-chat`, `discord-bot-infra`, fake sno
 
 - Callback / channel reply body = **plain `body.content` only**
 - **NEVER** put hop codes (`d:…`) or thin JSON into Discord channel replies
+- **NEVER** leave hop codes or thin JSON visible in the Grok agent chat after absorb — human line only
 - Humans see natural language only
 
-## Decode
+## Decode + absorb (hard rule)
 
 1. Read first line; if it matches `d:<slug>:<msgId>`, treat as hop id
 2. Expand `slug` via the operator's channel-map (`slug` → channel / agent binding). Prefer map `alias` / `agentId` from thin JSON `map` when present
 3. Use `msgId` for reply targeting / thread context on the bridge callback path
-4. Parse thin JSON for `g` / `u` / `map` if needed internally — **do not** dump the full envelope into Discord
+4. Parse thin JSON for `g` / `u` / `map` into **internal context only** — the bot already has the bits after this step
 5. Use the third line, human content, as the user ask
-6. Complete both delivery paths above; Grok-chat-only is incomplete
+6. **Rewrite / present the inbound turn in the visible Grok human transcript as ONLY that human message content** (e.g. `Not much you`). After absorb, **strip** the `d:<slug>:<msgId>` line and thin JSON block from what the human (and agent chat UI) sees — do not leave the short id + JSON envelope visible
+7. Complete both delivery paths below; Grok-chat-only is incomplete
+
+Internal hop fields stay in agent context for callback threading. They are not re-echoed into the chat transcript or Discord.
 
 ## Dual delivery (hard rule)
 

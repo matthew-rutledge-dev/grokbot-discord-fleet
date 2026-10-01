@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.8
+
+- `discord-fleet-hop-shorthand`: after decode/map into context, strip `d:<slug>:<msgId>` + thin JSON from the visible Grok chat transcript — present **human message content only**; callback out with plain content still required
+- Brief README skills-list note for absorb/strip behavior
+- Bump plugin manifests to `0.3.8`
+
 ## 0.3.7
 
 - Require dual delivery after decoding a short hop: bridge `CALLBACK` to Discord with plain `body.content` is mandatory; a Grok chat reply is optional and chat-only is incomplete

@@ -149,7 +149,7 @@ Keep the bridge loopback-only behind the tunnel, rotate `CALLBACK_TOKEN`, and ke
 - `discord-fleet-status` — health/status checks via status MCP
 - `discord-fleet-manage` — channel-binding plans / gated inspect (dry-run / confirm)
 - `discord-fleet-bridge-setup` — **operator-driven** optional wake-bridge setup on an explicit ask (clone/deploy/verify `/healthz` on **your** host; never silent postinstall; never `curl|bash`; prefer plugin vars / vault→runtime env over plaintext `.env`). Skill includes short **Windows vs Linux** notes.
-- `discord-fleet-hop-shorthand` — inbound wake is exactly `d:<slug>:<msgId>`, thin JSON `{id,g,u,map}`, then human content; Discord OUT is plain `body.content` only — never put codes in channel replies
+- `discord-fleet-hop-shorthand` — inbound wake is exactly `d:<slug>:<msgId>`, thin JSON `{id,g,u,map}`, then human content; after decode/absorb, Grok chat shows **human content only** (strip `d:` + JSON); Discord OUT is plain `body.content` only — never put codes in channel replies; bridge callback still required
 
 ## Marketplace PR (later — not in this change)
 
