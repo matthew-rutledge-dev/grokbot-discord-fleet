@@ -52,7 +52,7 @@ Local smoke (no Cursor):
 ```bash
 cd ~/.cursor/plugins/local/grokbot-discord-fleet/mcp/status
 export DISCORD_BOT_TOKEN=...   # from vault — do not paste into chat/git
-export DISCORD_GUILD_ID=949100784186966066
+export DISCORD_GUILD_ID=<guild-id>
 npm ci
 npx tsx -e 'import("./src/index.ts")'   # or drive via MCP client
 ```
