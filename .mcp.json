@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "discord-fleet-status": {
+      "command": "npx",
+      "args": ["-y", "tsx", "${GROK_PLUGIN_ROOT}/mcp/status/src/index.ts"],
+      "cwd": "${GROK_PLUGIN_ROOT}/mcp/status",
+      "env": {
+        "DISCORD_BOT_TOKEN": "${DISCORD_BOT_TOKEN}",
+        "DISCORD_GUILD_ID": "${DISCORD_GUILD_ID}",
+        "DISCORD_BRIDGE_HEALTH_URL": "${DISCORD_BRIDGE_HEALTH_URL}"
+      }
+    },
+    "discord-fleet-manage": {
+      "command": "npx",
+      "args": ["-y", "tsx", "${GROK_PLUGIN_ROOT}/mcp/manage/src/index.ts"],
+      "cwd": "${GROK_PLUGIN_ROOT}/mcp/manage",
+      "env": {
+        "DISCORD_BOT_TOKEN": "${DISCORD_BOT_TOKEN}",
+        "DISCORD_GUILD_ID": "${DISCORD_GUILD_ID}"
+      }
+    }
+  }
+}

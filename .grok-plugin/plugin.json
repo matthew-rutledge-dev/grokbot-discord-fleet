@@ -1,0 +1,22 @@
+{
+  "name": "grokbot-discord-fleet",
+  "version": "0.3.0",
+  "description": "Manage and status MCP + skills for Matthew's Grok Bot Discord fleet (Discord REST + optional bridge /healthz). Not the wake bridge.",
+  "author": {
+    "name": "Matthew Rutledge",
+    "url": "https://github.com/matthew-rutledge-dev"
+  },
+  "homepage": "https://github.com/matthew-rutledge-dev/grokbot-discord-fleet",
+  "repository": "https://github.com/matthew-rutledge-dev/grokbot-discord-fleet",
+  "license": "MIT",
+  "keywords": [
+    "discord",
+    "grok-bot",
+    "mcp",
+    "fleet",
+    "status",
+    "manage"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json"
+}
