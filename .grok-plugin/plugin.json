@@ -1,6 +1,6 @@
 {
   "name": "grokbot-discord-fleet",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Discord fleet manage/status MCP + skills (Discord REST + optional self-hosted bridge /healthz). Each installer uses their own bot token — not shared provider infra. Not the wake bridge.",
   "author": {
     "name": "Matthew Rutledge",

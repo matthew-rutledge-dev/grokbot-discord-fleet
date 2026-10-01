@@ -133,6 +133,16 @@ From bridge README / `http-server.ts` (read-only reference repo):
 
 Typical self-host listens loopback-only (`127.0.0.1:18083`). Point `DISCORD_BRIDGE_HEALTH_URL` at that URL (or a local SSH tunnel end).
 
+### Optional durable Cloudflare tunnel
+
+Quick `trycloudflare.com` tunnels are temporary and stop when their `cloudflared` process stops. For durable self-hosted wake, use a named Cloudflare Tunnel with a supervised connector and your own public hostnames, for example:
+
+```text
+CALLBACK_BASE_URL=https://callback.example.com
+GROK_BOT_SENDPROMPT_URL=https://sendprompt.example.com
+```
+
+Keep the bridge loopback-only behind the tunnel, rotate `CALLBACK_TOKEN`, and keep secrets in the host vault/runtime environment. The tunnel and wake gateway are optional and are not provided by this plugin. For `/healthz`, keep using the existing loopback binding and SSH tunnel workflow rather than exposing the bridge port.
 ## Skills
 
 - `discord-fleet-boundary` — always on for fleet work; manage/status vs wake path; **per-installer credentials, not shared provider**

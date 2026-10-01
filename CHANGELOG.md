@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.4
+
+- Skill `discord-fleet-bridge-setup`: document optional durable named Cloudflare Tunnels for self-hosted callback + `sendPrompt` wake, with placeholder hostnames only; keep the loopback bridge private, rotate `CALLBACK_TOKEN`, and retain SSH tunnel notes for `/healthz`
+- README: briefly note durable named-tunnel configuration and the public `CALLBACK_BASE_URL` / `GROK_BOT_SENDPROMPT_URL` settings
+
 ## 0.3.3
 
 - Marketplace-friendly **plugin variables**: declare `variables` on `.grok-plugin/plugin.json` (and sync root / `.cursor-plugin`); `DISCORD_BOT_TOKEN` required; optional `DISCORD_GUILD_ID`, `DISCORD_BRIDGE_HEALTH_URL`

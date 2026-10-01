@@ -36,6 +36,14 @@ Only when the user **explicitly** asks to set up, deploy, or verify the Discord 
 | Windows local | Fine for **local smoke** of this plugin's MCP/skills and optional local bridge. Prefer plugin vars over plaintext `.env` when avoidable. |
 | Delivery | Never `curl \| bash` or third-party install pipes. No secrets in git, chat, or this tree. |
 
+## Optional durable Cloudflare tunnel (self-hosted wake)
+
+`trycloudflare.com` quick tunnels are temporary: they end when the `cloudflared` process stops. For a durable optional self-hosted wake path, use a named Cloudflare Tunnel and run its connector under a supervisor so it survives restarts. Publish the callback and gateway routes with placeholder hostnames such as:
+
+- `CALLBACK_BASE_URL=https://callback.example.com` — the public callback origin for the bridge/gateway.
+- `GROK_BOT_SENDPROMPT_URL=https://sendprompt.example.com` — the user's own gateway endpoint that accepts `sendPrompt`.
+
+Keep the bridge bound to loopback (`127.0.0.1`) and route the named tunnel to it; do not expose the bridge port directly. Rotate `CALLBACK_TOKEN` whenever the callback is deployed, shared, or suspected exposed, and supply it through the host vault/runtime environment — never commit or print it. These routes are optional self-host configuration, not endpoints provided by this plugin.
 ## How
 
 1. **Confirm intent + host** — Ask which host (marketplace: **their** machine; Matthew operator may name servergen1 `/opt/sites/discord-fleet-wake`). Proceed only after explicit yes for that host. Clarify they will use **their own** Discord bot / guild unless they are Matthew operating Matthew's fleet.
