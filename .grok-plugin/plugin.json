@@ -1,7 +1,7 @@
 {
   "name": "grokbot-discord-fleet",
-  "version": "0.3.9",
-  "description": "Discord fleet manage/status MCP + skills (Discord REST + optional self-hosted bridge /healthz). Each installer uses their own bot token — not shared provider infra. Not the wake bridge.",
+  "version": "0.3.10",
+  "description": "Discord fleet manage/status MCP + skills (Discord REST + optional self-hosted bridge /healthz). Each installer uses their own bot token \u2014 not shared provider infra. Not the wake bridge.",
   "author": {
     "name": "Matthew Rutledge",
     "url": "https://github.com/matthew-rutledge-dev"
@@ -25,12 +25,12 @@
       "DISCORD_BOT_TOKEN": {
         "type": "string",
         "title": "Discord bot token",
-        "description": "YOUR Discord bot token for REST reads (Discord Developer Portal). Each marketplace installer supplies their own bot — not Matthew's vault or a shared provider. Never commit."
+        "description": "YOUR Discord bot token for REST reads (Discord Developer Portal). Each marketplace installer supplies their own bot \u2014 not Matthew's vault or a shared provider. Never commit."
       },
       "DISCORD_GUILD_ID": {
         "type": "string",
         "title": "Default Discord guild ID",
-        "description": "Optional. Default guild snowflake for channel/guild status tools — your guild, not a shared one."
+        "description": "Optional. Default guild snowflake for channel/guild status tools \u2014 your guild, not a shared one."
       },
       "DISCORD_BRIDGE_HEALTH_URL": {
         "type": "string",
@@ -38,6 +38,8 @@
         "description": "Optional. Full URL to YOUR self-hosted wake-bridge GET /healthz (e.g. http://127.0.0.1:18083/healthz). Omit if you are not running a bridge."
       }
     },
-    "required": ["DISCORD_BOT_TOKEN"]
+    "required": [
+      "DISCORD_BOT_TOKEN"
+    ]
   }
 }

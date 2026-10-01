@@ -129,9 +129,50 @@ From bridge README / `http-server.ts` (read-only reference repo):
 | Path | Method | Purpose |
 |------|--------|---------|
 | `/healthz` | GET | Liveness + `discordReady` / `hasTokenConfigured` |
-| `/callback` | POST | Agent → Discord delivery (Bearer `CALLBACK_TOKEN`) — **not used by this plugin** |
+| `/callback` | POST | Agent → Discord delivery (Bearer / `x-callback-token` with `CALLBACK_TOKEN`) — **not used by this plugin** |
 
 Typical self-host listens loopback-only (`127.0.0.1:18083`). Point `DISCORD_BRIDGE_HEALTH_URL` at that URL (or a local SSH tunnel end).
+
+### Outbound media (`POST /callback`)
+
+Auth is unchanged (Bearer or `x-callback-token`). Text-only bodies remain backward compatible. This plugin never calls `/callback`; document for installers' own bridge.
+
+**JSON body**
+
+| Field | Notes |
+|-------|--------|
+| `channelId` | Required (guild or DM channel snowflake) |
+| `content` | Optional if ≥1 attachment |
+| `replyToMessageId` | Optional |
+| `attachments` | Optional, ≤10 items |
+
+Each attachment is **either** base64 inline **or** an https URL (XOR — not both):
+
+```json
+{ "filename": "shot.png", "contentType": "image/png", "data": "<base64-no-data-url-prefix>" }
+```
+
+```json
+{ "filename": "shot.png", "contentType": "image/png", "url": "https://cdn.example.com/shot.png" }
+```
+
+**Multipart:** form fields `channelId`, optional `content`, optional `replyToMessageId`, plus files as `files` / `files[]`.
+
+**Limits:** 8 MiB per file, 25 MiB total. MIME allowlist: `image/png|jpeg|gif|webp`, `video/mp4|webm`, `audio/mpeg|ogg|wav`, `application/pdf`, `text/plain` — else **415**.
+
+**Error codes (bridge):** `content_or_attachment_required`, `attachment_too_large`, `too_many_attachments`, `unsupported_media_type`, `attachment_fetch_failed`.
+
+Never put hop codes (`d:…`) or thin JSON into Discord replies — human text and/or allowed attachments only.
+
+### Inbound media (wake)
+
+On **your** bridge, thin JSON after `d:<slug>:<msgId>` may include optional:
+
+```json
+"a": [{ "url": "https://cdn.discordapp.com/…", "filename": "shot.png", "contentType": "image/png", "size": 12345 }]
+```
+
+These are Discord CDN **URL refs** (not base64). The same refs may appear on `sendPrompt` `metadata.attachments`. Text-only wakes are unchanged; attachment-only wakes (no human text) are OK. **CDN URLs expire** — fetch promptly on the installer/operator side. This plugin does not own wake or perform the fetch.
 
 ### Direct messages (DMs)
 
@@ -139,8 +180,8 @@ Wake DMs are handled by **your** optional self-hosted bridge (not this plugin). 
 
 1. **Inbound** — Bridge needs `DirectMessages` intent; `security.dm.policy` is `pairing` | `allowlist` | `disabled`; combine `security.dm.allowFrom` with env allowlists; owner runs `!pair <userId>` under pairing; `ignoreBots` applies.
 2. **Agent** — Set `security.dm.defaultAgentId` on **your** bridge `security.json`, or DMs deny as `dm_no_agent`. Guild channel-map rows do **not** route DMs.
-3. **Outbound** — Same `POST /callback` as guild: `{channelId, content, agentId?, replyToMessageId?}`. Discord DMs are channels — use the DM channel snowflake from wake metadata (`discordChannelId`). There is **no** separate `send_dm` MCP in this plugin.
-4. **Hop** — Guild wakes use `d:<channel-slug>:<msgId>`; DMs use the same shape with slug default `dm` (or `security.dm.slug`), and thin JSON `g` is `null`. Strip `d:` + JSON from visible chat; Discord OUT stays plain `body.content` only. See skill `discord-fleet-hop-shorthand`.
+3. **Outbound** — Same `POST /callback` as guild: `{channelId, content?, agentId?, replyToMessageId?, attachments?}`. Discord DMs are channels — use the DM channel snowflake from wake metadata (`discordChannelId`). There is **no** separate `send_dm` MCP in this plugin.
+4. **Hop** — Guild wakes use `d:<channel-slug>:<msgId>`; DMs use the same shape with slug default `dm` (or `security.dm.slug`), and thin JSON `g` is `null` (optional `a:` for media). Strip `d:` + JSON from visible chat; Discord OUT is human text and/or allowed attachments — never hop codes. See skill `discord-fleet-hop-shorthand`.
 
 Marketplace installers edit **their** bridge `security.json` (`dm.allowFrom`, `dm.defaultAgentId`, policy). Plugin variables remain `DISCORD_BOT_TOKEN` / optional guild / health URL only — do not ship another operator's agent IDs or guild snowflakes as product defaults.
 
@@ -160,7 +201,7 @@ Keep the bridge loopback-only behind the tunnel, rotate `CALLBACK_TOKEN`, and ke
 - `discord-fleet-status` — health/status checks via status MCP
 - `discord-fleet-manage` — channel-binding plans / gated inspect (dry-run / confirm)
 - `discord-fleet-bridge-setup` — **operator-driven** optional wake-bridge setup on an explicit ask (clone/deploy/verify `/healthz` on **your** host; never silent postinstall; never `curl|bash`; prefer plugin vars / vault→runtime env over plaintext `.env`). Skill includes short **Windows vs Linux** notes.
-- `discord-fleet-hop-shorthand` — inbound wake is exactly `d:<slug>:<msgId>` (guild slug from channel-map; DMs default slug `dm`, `g` may be `null`), thin JSON `{id,g,u,map}`, then human content; after decode/absorb, Grok chat shows **human content only** (strip `d:` + JSON); Discord OUT is plain `body.content` only — never put codes in channel/DM replies; same `/callback` with DM `channelId`; bridge callback still required
+- `discord-fleet-hop-shorthand` — inbound wake is exactly `d:<slug>:<msgId>` (guild slug from channel-map; DMs default slug `dm`, `g` may be `null`), thin JSON `{id,g,u,map}` with optional `a:` CDN attachment refs, then human content; after decode/absorb, Grok chat shows **human content only** (strip `d:` + JSON); Discord OUT is human text and/or allowed `/callback` attachments — never hop codes; same `/callback` with DM `channelId`; bridge callback still required
 
 ## Marketplace PR (later — not in this change)
 

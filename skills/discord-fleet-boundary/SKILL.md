@@ -18,10 +18,11 @@ Any Discord fleet task: health, channel maps, bindings, wake questions, or "whic
 - Never merge this plugin into the general/Betty catalog.
 - Never deploy to `/opt/sites/discord-fleet-wake` from this plugin for marketplace users (Matthew-operator work only, and only on explicit ask via bridge-setup).
 - **DMs:** optional bridge `security.dm.*` + same `/callback` with DM `channelId`. This plugin has **no** `send_dm` MCP. Guild channel-map does not route DMs; set `defaultAgentId` on the bridge or they deny `dm_no_agent`.
+- **Media:** optional bridge inbound thin-JSON `a:` (CDN URL refs — fetch promptly) and outbound `/callback` `attachments` or multipart files. This plugin does not own wake or call `/callback`; document for installers' own bridge only. Never put hop codes in Discord replies.
 
 ## What to do
 
 1. Status/health → skill `discord-fleet-status` + status MCP (uses **their** plugin vars).
 2. Binding / manage planning → skill `discord-fleet-manage` + manage MCP (dry-run / `confirm=true` reads).
 3. Actually waking a bot or editing live map/security → stop here; point at **their** optional self-hosted bridge (skill `discord-fleet-bridge-setup` on explicit ask). Do not invent wake calls from this plugin.
-4. Discord wake inbound / callback hop context → skill `discord-fleet-hop-shorthand` (inbound shape `d:<slug>:<msgId>` — DMs default slug `dm`, `g` may be `null`; thin JSON `{id,g,u,map}`, then human content; never put codes in Discord channel/DM replies; same `/callback`).
+4. Discord wake inbound / callback hop context → skill `discord-fleet-hop-shorthand` (inbound shape `d:<slug>:<msgId>` — DMs default slug `dm`, `g` may be `null`; thin JSON `{id,g,u,map,a?}`, then human content; never put codes in Discord channel/DM replies; same `/callback` with optional attachments).

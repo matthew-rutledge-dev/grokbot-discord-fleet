@@ -16,6 +16,8 @@ No secrets in this file.
 
 ## Done
 
+- Discord media docs (0.3.10): inbound thin-JSON `a:` CDN refs + outbound `/callback` attachments (JSON/multipart); marketplace placeholders only; plugin still not wake owner
+
 - Plugin layout + Discord manage/status MCP (0.2.0): Discord REST + optional bridge `/healthz`; dry-run / confirm-gated manage; skills; pushed to `matthew-rutledge-dev/grokbot-discord-fleet`
 - Still **not** on the wake path; no deploy to `/opt/sites/discord-fleet-wake`
 

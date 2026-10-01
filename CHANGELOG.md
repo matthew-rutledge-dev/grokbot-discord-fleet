@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.10
+
+- Document Discord **media** for marketplace installers (optional self-hosted bridge; this plugin still does not own wake)
+- **Outbound** `POST /callback`: JSON `attachments` (≤10; base64 `data` XOR https `url`) or multipart `files` / `files[]`; `content` optional when ≥1 attachment; limits 8 MiB/file, 25 MiB total; MIME allowlist; text-only bodies remain backward compatible
+- **Inbound** wake: thin JSON may include optional `a:[{url,filename?,contentType?,size?}]` Discord CDN URL refs (not base64); also on `sendPrompt` `metadata.attachments`; attachment-only wakes OK; fetch CDN URLs promptly
+- Skills: `discord-fleet-hop-shorthand`, `discord-fleet-bridge-setup`, `discord-fleet-boundary` — media notes with placeholders only
+- Bump plugin manifests to `0.3.10`
+
+<!-- Operator-only (not marketplace defaults): live bridge tip 669f383 on grok-bot-discord-bridge / servergen1 documents the media contract; do not publish operator hostnames, agent UUIDs, or secrets as product defaults. -->
+
 ## 0.3.9
 
 - Document Discord **DMs** for marketplace installers: bridge `security.dm` policy / allowFrom / `!pair` / `defaultAgentId` (or `dm_no_agent`); same `POST /callback` with DM channel snowflake; hop `d:dm:<msgId>` (or `security.dm.slug`) with thin JSON `g: null`; no `send_dm` MCP
