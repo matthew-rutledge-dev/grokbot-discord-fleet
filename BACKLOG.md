@@ -1,6 +1,6 @@
 # Backlog — grokbot-discord-fleet
 
-Local-only until Matthew says push. No secrets in this file.
+No secrets in this file.
 
 ## Marketplace / connector add-ons (candidates)
 
@@ -14,6 +14,12 @@ Local-only until Matthew says push. No secrets in this file.
 - **Owners:** Plug_discord owns marketplace add-on scaffold/wire plan; Shion_career does **not** own the MCP wire (career/resume only). Pull key via vault when wiring.
 - **Source:** handoff 2026-09-30 via Shion_career
 
-## Done locally (scaffold)
-- Plugin layout + Discord manage/status MCP stubs + boundary/status/manage skills under `~/.cursor/plugins/local/grokbot-discord-fleet/`
-- Not pushed to `matthew-rutledge-dev/grokbot-discord-fleet` yet (Matthew: leave local until done)
+## Done
+
+- Plugin layout + Discord manage/status MCP (0.2.0): Discord REST + optional bridge `/healthz`; dry-run / confirm-gated manage; skills; pushed to `matthew-rutledge-dev/grokbot-discord-fleet`
+- Still **not** on the wake path; no deploy to `/opt/sites/discord-fleet-wake`
+
+## Follow-ups (optional)
+
+- SSH-tunnel recipe for `DISCORD_BRIDGE_HEALTH_URL` from laptop
+- Optional read of a *local copy* of channel-map.json path via env (still never write from plugin)

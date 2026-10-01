@@ -11,13 +11,14 @@ Any Discord fleet task: health, channel maps, bindings, wake questions, or "whic
 
 ## Hard boundary
 
-- **This plugin** = manage + status MCP stubs and skills only.
+- **This plugin** = manage + status MCP (Discord REST reads + optional bridge `/healthz`) and skills only.
 - **Wake path** = separate: `matthew-rutledge-dev/grok-bot-discord-bridge` and host path `/opt/sites/discord-fleet-wake` on servergen1 (Diablo owns). Zion Gateway → `sendPrompt` / webhook via that bridge — not this plugin.
-- Never put secrets (tokens, webhooks, `.env`) in git or in this plugin tree.
+- Never put secrets (tokens, webhooks, `.env`) in git or in this plugin tree. Use `DISCORD_BOT_TOKEN` / plugin variables; host vault `DISCORD_FLEET_WAKE`.
 - Never merge this plugin into the general/Betty catalog.
+- Never deploy to `/opt/sites/discord-fleet-wake` from this plugin.
 
 ## What to do
 
 1. Status/health → skill `discord-fleet-status` + status MCP.
-2. Binding / manage planning → skill `discord-fleet-manage` + manage MCP (dry-run).
-3. Actually waking a bot → stop here; point at the bridge / wake host. Do not invent wake calls from this plugin.
+2. Binding / manage planning → skill `discord-fleet-manage` + manage MCP (dry-run / `confirm=true` reads).
+3. Actually waking a bot or editing live map/security → stop here; point at the bridge / wake host. Do not invent wake calls from this plugin.

@@ -1,9 +1,9 @@
 {
   "name": "discord-fleet-manage-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Stub MCP server: Discord fleet manage / dry-run (no Discord tokens)",
+  "description": "MCP server: Discord fleet manage — dry-run plans + gated read helpers",
   "scripts": {
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit"

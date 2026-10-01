@@ -1,15 +1,49 @@
 {
   "name": "grokbot-discord-fleet",
   "displayName": "Grok Bot Discord Fleet",
-  "version": "0.1.0",
-  "description": "Manage and status MCP + skills for Matthew's Grok Bot Discord fleet. Not the wake bridge.",
-  "author": { "name": "Matthew Rutledge" },
+  "version": "0.2.0",
+  "description": "Manage and status MCP + skills for Matthew's Grok Bot Discord fleet (Discord REST + bridge /healthz). Not the wake bridge.",
+  "author": {
+    "name": "Matthew Rutledge"
+  },
   "homepage": "https://github.com/matthew-rutledge-dev/grokbot-discord-fleet",
   "repository": "https://github.com/matthew-rutledge-dev/grokbot-discord-fleet",
   "license": "MIT",
-  "keywords": ["discord", "grok-bot", "mcp", "fleet", "status", "manage"],
+  "keywords": [
+    "discord",
+    "grok-bot",
+    "mcp",
+    "fleet",
+    "status",
+    "manage"
+  ],
   "category": "developer-tools",
-  "tags": ["discord", "mcp", "fleet"],
+  "tags": [
+    "discord",
+    "mcp",
+    "fleet"
+  ],
   "skills": "./skills/",
-  "mcpServers": "./mcp.json"
+  "mcpServers": "./mcp.json",
+  "variables": {
+    "type": "object",
+    "properties": {
+      "DISCORD_BOT_TOKEN": {
+        "type": "string",
+        "title": "Discord bot token",
+        "description": "Bot token for Discord REST reads. Host vault key: DISCORD_FLEET_WAKE. Never commit."
+      },
+      "DISCORD_GUILD_ID": {
+        "type": "string",
+        "title": "Default Discord guild ID",
+        "description": "Default guild snowflake for channel/guild status tools."
+      },
+      "DISCORD_BRIDGE_HEALTH_URL": {
+        "type": "string",
+        "title": "Bridge health URL",
+        "description": "Full URL to bridge GET /healthz (e.g. http://127.0.0.1:18083/healthz via SSH tunnel). Optional."
+      }
+    },
+    "required": []
+  }
 }
