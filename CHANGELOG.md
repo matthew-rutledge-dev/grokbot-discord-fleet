@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.7
+
+- Require dual delivery after decoding a short hop: bridge `CALLBACK` to Discord with plain `body.content` is mandatory; a Grok chat reply is optional and chat-only is incomplete
+- Bump plugin manifests to `0.3.7`
+
 ## 0.3.6
 
 - Align `discord-fleet-hop-shorthand` with bridge commit `a6a26fb`: inbound wake is exactly `d:<slug>:<msgId>`, thin JSON `{id,g,u,map}`, then human content; the obsolete `[discord-bridge]` compatibility line is removed

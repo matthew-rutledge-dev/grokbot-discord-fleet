@@ -49,6 +49,15 @@ Placeholders only in docs/examples (`ai-gen-chat`, `discord-bot-infra`, fake sno
 3. Use `msgId` for reply targeting / thread context on the bridge callback path
 4. Parse thin JSON for `g` / `u` / `map` if needed internally — **do not** dump the full envelope into Discord
 5. Use the third line, human content, as the user ask
+6. Complete both delivery paths above; Grok-chat-only is incomplete
+
+## Dual delivery (hard rule)
+
+After decoding a short hop, the agent **MUST** reply through the bridge `CALLBACK` to Discord, using the triggering hop for reply/thread targeting and a plain `body.content` string. The agent **MAY ALSO** reply in Grok chat, but a Grok-chat reply does not replace the Discord callback. If the callback cannot be completed, report the delivery failure rather than treating chat-only output as complete.
+
+- **Required:** bridge `CALLBACK` → Discord, with natural-language text in plain `body.content` only
+- **Optional:** Grok chat reply
+- **Incomplete:** Grok chat reply without the Discord callback
 
 ## Encode (if an agent must pass context)
 
