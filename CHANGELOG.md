@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+- Add skill `discord-fleet-bridge-setup`: operator-driven Discord wake bridge setup (explicit user ask only; not postinstall)
+- Document vault key `DISCORD_FLEET_WAKE`, loopback `GET /healthz` on `127.0.0.1:18083`, and plugin env `DISCORD_BRIDGE_HEALTH_URL`
+- README: mention new skill; anti-jobs (no curl|bash, no secrets in git, no silent wake merge)
+
 ## 0.3.0
 
 - Align to Grok Build / xAI plugin-marketplace conventions

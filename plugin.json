@@ -1,7 +1,7 @@
 {
   "name": "grokbot-discord-fleet",
   "displayName": "Grok Bot Discord Fleet",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Manage and status MCP + skills for Matthew's Grok Bot Discord fleet (Discord REST + bridge /healthz). Not the wake bridge.",
   "author": {
     "name": "Matthew Rutledge"

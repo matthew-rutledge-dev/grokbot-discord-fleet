@@ -15,7 +15,7 @@ Do not merge this plugin into the general/Betty catalog. Do not put secrets in g
 |-------|------|
 | `discord-fleet-status` MCP | Bridge `GET /healthz` probe + Discord REST identity/guild/channel reads |
 | `discord-fleet-manage` MCP | Boundary docs, dry-run channel-map plans, gated read helpers (`confirm=true`) |
-| Skills | Boundary, status checks, manage planning |
+| Skills | Boundary, status, manage planning, operator-driven bridge setup |
 
 ## Layout (Grok-canonical)
 
@@ -122,6 +122,7 @@ From bridge README / `http-server.ts` (read-only reference repo):
 - `discord-fleet-boundary` — always on for fleet work; manage/status vs wake path
 - `discord-fleet-status` — health/status checks via status MCP
 - `discord-fleet-manage` — channel-binding plans / gated inspect (dry-run / confirm)
+- `discord-fleet-bridge-setup` — **operator-driven** wake-bridge setup on an explicit ask (clone/deploy/verify `/healthz`; never silent postinstall; never `curl|bash`; vault `DISCORD_FLEET_WAKE`)
 
 ## Marketplace PR (later — not in this change)
 
