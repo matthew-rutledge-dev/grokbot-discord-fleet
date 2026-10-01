@@ -16,7 +16,7 @@ Do not merge this plugin into the general/Betty catalog. Do not put secrets in g
 |-------|------|
 | `discord-fleet-status` MCP | Optional bridge `GET /healthz` probe + Discord REST identity/guild/channel reads |
 | `discord-fleet-manage` MCP | Boundary docs, dry-run channel-map plans, gated read helpers (`confirm=true`) |
-| Skills | Boundary, status, manage planning, operator-driven optional bridge setup |
+| Skills | Boundary, status, manage planning, operator-driven optional bridge setup, hop-shorthand encode/decode |
 
 ## Layout (Grok-canonical)
 
@@ -149,6 +149,7 @@ Keep the bridge loopback-only behind the tunnel, rotate `CALLBACK_TOKEN`, and ke
 - `discord-fleet-status` — health/status checks via status MCP
 - `discord-fleet-manage` — channel-binding plans / gated inspect (dry-run / confirm)
 - `discord-fleet-bridge-setup` — **operator-driven** optional wake-bridge setup on an explicit ask (clone/deploy/verify `/healthz` on **your** host; never silent postinstall; never `curl|bash`; prefer plugin vars / vault→runtime env over plaintext `.env`). Skill includes short **Windows vs Linux** notes.
+- `discord-fleet-hop-shorthand` — decode/encode short wake hop ids (`d:<slug>:<message.id>` + thin JSON); Discord OUT is plain `body.content` only — never put codes in channel replies
 
 ## Marketplace PR (later — not in this change)
 

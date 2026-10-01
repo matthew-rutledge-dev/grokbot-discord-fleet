@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.5
+
+- Add skill `discord-fleet-hop-shorthand`: decode/encode short wake envelope (`d:<slug>:<message.id>` + thin JSON `{id,g,u,map}`); Discord OUT is plain `body.content` only; bridge mints, bots decode
+- README skills list + brief pointers from `discord-fleet-boundary` and `discord-fleet-bridge-setup`
+
 ## 0.3.4
 
 - Skill `discord-fleet-bridge-setup`: document optional durable named Cloudflare Tunnels for self-hosted callback + `sendPrompt` wake, with placeholder hostnames only; keep the loopback bridge private, rotate `CALLBACK_TOKEN`, and retain SSH tunnel notes for `/healthz`

@@ -51,7 +51,7 @@ Keep the bridge bound to loopback (`127.0.0.1`) and route the named tunnel to it
 3. **Env: prefer plugin vars / vault → runtime** — Load bot token and related secrets from plugin variables or host vault injection into process env. Discourage writing a long-lived plaintext `.env` when avoidable. If the bridge docs require a host `.env`, use `.env.example` names only; never commit real `.env` or echo secret values. Matthew operator vault hint: `DISCORD_FLEET_WAKE` (operator-only).
 4. **Deploy / run** — Start or update per bridge README (Compose / process on **their** host). Keep service stopped until a real token is configured if the bridge docs say so.
 5. **Verify health** — Bridge HTTP is usually loopback-only. On the host: `GET http://127.0.0.1:18083/healthz` (or the port in bridge docs). From a laptop, open an SSH tunnel first, then probe the tunneled URL. Expect liveness / `discordReady` fields from bridge docs — treat missing token or stopped Compose as evidence, not failure to invent.
-6. **Point the plugin at health** — Set plugin variable / env `DISCORD_BRIDGE_HEALTH_URL` to the full `/healthz` URL. Status MCP can then probe; still no wake from this plugin.
+6. **Point the plugin at health** — Set plugin variable / env `DISCORD_BRIDGE_HEALTH_URL` to the full `/healthz` URL. Status MCP can then probe; still no wake from this plugin. Inbound wakes use short hop headers (`d:<slug>:<message.id>`); see skill `discord-fleet-hop-shorthand` for bot-side decode — never put hop codes in Discord replies.
 7. **Ownership** — Marketplace: user owns their bridge and guild. If the host is Matthew's servergen1, note wake ownership stays with **Diablo** (`/opt/sites/discord-fleet-wake`); do not take over that path from this plugin.
 
 ## Evidence expected
@@ -66,4 +66,5 @@ Keep the bridge bound to loopback (`127.0.0.1`) and route the named tunnel to it
 
 - Boundary: skill `discord-fleet-boundary`
 - After setup: skill `discord-fleet-status` + status MCP `fleet_health`
+- Wake hop encode/decode (`d:<slug>:<message.id>`): skill `discord-fleet-hop-shorthand` — Discord OUT remains plain `body.content` only
 - Bridge SoT: [matthew-rutledge-dev/grok-bot-discord-bridge](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge)
