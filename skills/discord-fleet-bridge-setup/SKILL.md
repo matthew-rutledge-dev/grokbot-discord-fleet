@@ -17,6 +17,17 @@ Only when the user **explicitly** asks to set up, deploy, or verify the Discord 
 - Do **not** invent wake / `sendPrompt` calls from this plugin's MCP tools.
 - Env comes from host vault — never paste token values into commits or skill output.
 
+
+## Windows vs Linux (operators)
+
+| Topic | Notes |
+|-------|--------|
+| Env vars | Same on both: `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_BRIDGE_HEALTH_URL` (plugin/host env — never commit). |
+| Health URL | Bridge listens loopback-only on **servergen1**: `http://127.0.0.1:18083/healthz`. From the host, curl that URL. From **Windows** (or any laptop), open an **SSH tunnel** (or WSL → SSH) to servergen1, then set `DISCORD_BRIDGE_HEALTH_URL=http://127.0.0.1:18083/healthz` against the local tunnel end. Example: `ssh -L 18083:127.0.0.1:18083 user@servergen1`. |
+| Host path | `/opt/sites/discord-fleet-wake` is **Linux / servergen1** only (Diablo owns). Do not invent a Windows equivalent for production wake. |
+| Windows local | Optional for **local smoke** of this plugin's MCP/skills only (missing token → graceful messages). Not a deploy host for the wake bridge. |
+| Delivery | Never `curl \| bash` or third-party install pipes. No secrets in git, chat, or this tree. |
+
 ## How
 
 1. **Confirm intent + host** — Ask which host (hint: servergen1 path `/opt/sites/discord-fleet-wake`, Diablo owns). Proceed only after explicit yes for that host.

@@ -122,7 +122,7 @@ From bridge README / `http-server.ts` (read-only reference repo):
 - `discord-fleet-boundary` — always on for fleet work; manage/status vs wake path
 - `discord-fleet-status` — health/status checks via status MCP
 - `discord-fleet-manage` — channel-binding plans / gated inspect (dry-run / confirm)
-- `discord-fleet-bridge-setup` — **operator-driven** wake-bridge setup on an explicit ask (clone/deploy/verify `/healthz`; never silent postinstall; never `curl|bash`; vault `DISCORD_FLEET_WAKE`)
+- `discord-fleet-bridge-setup` — **operator-driven** wake-bridge setup on an explicit ask (clone/deploy/verify `/healthz`; never silent postinstall; never `curl|bash`; vault `DISCORD_FLEET_WAKE`). Skill includes short **Windows vs Linux** notes: same env vars; SSH/WSL tunnel from Windows to servergen1 loopback `:18083`; host path `/opt/sites/discord-fleet-wake` is Linux-only; Windows optional for local plugin smoke only.
 
 ## Marketplace PR (later — not in this change)
 
