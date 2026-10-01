@@ -23,3 +23,7 @@ No secrets in this file.
 
 - SSH-tunnel recipe for `DISCORD_BRIDGE_HEALTH_URL` from laptop
 - Optional read of a *local copy* of channel-map.json path via env (still never write from plugin)
+
+## Operator notes (Matthew fleet — not marketplace)
+
+- Live wake DMs route via bridge `security.dm.defaultAgentId` (orchestrator); guild channel maps unchanged. Do not hardcode agent ids into marketplace-facing README/skills.

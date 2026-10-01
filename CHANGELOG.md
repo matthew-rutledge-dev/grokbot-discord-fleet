@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.9
+
+- Document Discord **DMs** for marketplace installers: bridge `security.dm` policy / allowFrom / `!pair` / `defaultAgentId` (or `dm_no_agent`); same `POST /callback` with DM channel snowflake; hop `d:dm:<msgId>` (or `security.dm.slug`) with thin JSON `g: null`; no `send_dm` MCP
+- Skills: `discord-fleet-bridge-setup`, `discord-fleet-hop-shorthand`, `discord-fleet-boundary` — DM notes with placeholders only (installers use their own bot/guild/bridge agent ids)
+- Bump plugin manifests to `0.3.9`
+
+<!-- Operator-only (not marketplace defaults): Matthew's live wake on servergen1 maps DMs via security.dm.defaultAgentId to an orchestrator; do not publish that agent id or guild snowflakes as product defaults. Bridge SoT tip referenced for docs: b2cf955. -->
+
 ## 0.3.8
 
 - `discord-fleet-hop-shorthand`: after decode/map into context, strip `d:<slug>:<msgId>` + thin JSON from the visible Grok chat transcript — present **human message content only**; callback out with plain content still required

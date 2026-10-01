@@ -17,36 +17,55 @@ description: use this when Discord wake inbound hits a Grok bot, or when prepari
 Inbound wake prompt is exactly three lines (in order):
 
 1. **First line — hop id:** `d:<slug>:<msgId>`
-   - `slug` = stable channel-map short name (e.g. `ai-gen-chat`, `discord-bot-infra`)
+   - `slug` = guild channel-map short name (e.g. `ai-gen-chat`) or DM default `dm`
    - `msgId` = Discord snowflake of the triggering message (for reply / thread)
 2. **Thin JSON (second line):** `{id,g,u,map}`
    - `id` — same hop code as line 1 (`d:<slug>:<msgId>`)
    - `g` — guild id (or `null` for DMs)
    - `u` — author user id
-   - `map` — agent alias from channel-map (`alias` field)
+   - `map` — agent alias (guild: channel-map `alias`; DM: `security.dm.alias` or agent id)
 3. **Human content (third line):** cleaned Discord message text
 
 Example shape (placeholders only):
 
 ```text
 d:ai-gen-chat:1234567890123456789
-{"id":"d:ai-gen-chat:1234567890123456789","g":"1111111111111111111","u":"222222222222222222","map":"Rimuru_orch"}
+{"id":"d:ai-gen-chat:1234567890123456789","g":"1111111111111111111","u":"222222222222222222","map":"<your-agent-alias>"}
 hello from Discord
 ```
 
 Placeholders only in docs/examples (`ai-gen-chat`, `discord-bot-infra`, fake snowflakes). No real operator hostnames, tokens, or cdccentral URLs.
 
+### Guild vs DM
+
+| | Guild | DM |
+|---|-------|----|
+| Slug | Channel-map `slug` (e.g. `ai-gen-chat`) | Default `dm`, or `security.dm.slug` on the bridge |
+| `g` in thin JSON | Guild snowflake | `null` |
+| Agent routing | Channel-map row `agentId` / `alias` | Bridge `security.dm.defaultAgentId` (channel-map does **not** apply) |
+| Callback `channelId` | Guild channel snowflake | DM channel snowflake from wake metadata `discordChannelId` |
+
+Example DM shape (placeholders only):
+
+```text
+d:dm:1234567890123456789
+{"id":"d:dm:1234567890123456789","g":null,"u":"222222222222222222","map":"<your-dm-agent-alias-or-id>"}
+hello from a DM
+```
+
+Strip `d:` + JSON from the visible Grok chat after absorb — same as guild. Discord OUT is still plain `body.content` only (never hop codes), via the same `POST /callback` (no separate `send_dm` in this plugin).
+
 ## Discord OUT (hard rule)
 
 - Callback / channel reply body = **plain `body.content` only**
-- **NEVER** put hop codes (`d:…`) or thin JSON into Discord channel replies
+- **NEVER** put hop codes (`d:…`) or thin JSON into Discord channel or DM replies
 - **NEVER** leave hop codes or thin JSON visible in the Grok agent chat after absorb — human line only
 - Humans see natural language only
 
 ## Decode + absorb (hard rule)
 
 1. Read first line; if it matches `d:<slug>:<msgId>`, treat as hop id
-2. Expand `slug` via the operator's channel-map (`slug` → channel / agent binding). Prefer map `alias` / `agentId` from thin JSON `map` when present
+2. Expand `slug`: for guild, via the operator's channel-map (`slug` → channel / agent binding). For DMs (`slug` often `dm`, `g` null), do **not** expect a guild channel-map row — agent comes from bridge `security.dm.defaultAgentId`; prefer thin JSON `map` when present for alias context
 3. Use `msgId` for reply targeting / thread context on the bridge callback path
 4. Parse thin JSON for `g` / `u` / `map` into **internal context only** — the bot already has the bits after this step
 5. Use the third line, human content, as the user ask
@@ -57,7 +76,7 @@ Internal hop fields stay in agent context for callback threading. They are not r
 
 ## Dual delivery (hard rule)
 
-After decoding a short hop, the agent **MUST** reply through the bridge `CALLBACK` to Discord, using the triggering hop for reply/thread targeting and a plain `body.content` string. The agent **MAY ALSO** reply in Grok chat, but a Grok-chat reply does not replace the Discord callback. If the callback cannot be completed, report the delivery failure rather than treating chat-only output as complete.
+After decoding a short hop, the agent **MUST** reply through the bridge `CALLBACK` to Discord, using the triggering hop for reply/thread targeting and a plain `body.content` string. For DMs, `channelId` is the DM channel snowflake (wake metadata `discordChannelId`) — same callback contract as guild. The agent **MAY ALSO** reply in Grok chat, but a Grok-chat reply does not replace the Discord callback. If the callback cannot be completed, report the delivery failure rather than treating chat-only output as complete.
 
 - **Required:** bridge `CALLBACK` → Discord, with natural-language text in plain `body.content` only
 - **Optional:** Grok chat reply

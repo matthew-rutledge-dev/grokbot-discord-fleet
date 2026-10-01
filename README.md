@@ -133,6 +133,17 @@ From bridge README / `http-server.ts` (read-only reference repo):
 
 Typical self-host listens loopback-only (`127.0.0.1:18083`). Point `DISCORD_BRIDGE_HEALTH_URL` at that URL (or a local SSH tunnel end).
 
+### Direct messages (DMs)
+
+Wake DMs are handled by **your** optional self-hosted bridge (not this plugin). Summary for installers:
+
+1. **Inbound** — Bridge needs `DirectMessages` intent; `security.dm.policy` is `pairing` | `allowlist` | `disabled`; combine `security.dm.allowFrom` with env allowlists; owner runs `!pair <userId>` under pairing; `ignoreBots` applies.
+2. **Agent** — Set `security.dm.defaultAgentId` on **your** bridge `security.json`, or DMs deny as `dm_no_agent`. Guild channel-map rows do **not** route DMs.
+3. **Outbound** — Same `POST /callback` as guild: `{channelId, content, agentId?, replyToMessageId?}`. Discord DMs are channels — use the DM channel snowflake from wake metadata (`discordChannelId`). There is **no** separate `send_dm` MCP in this plugin.
+4. **Hop** — Guild wakes use `d:<channel-slug>:<msgId>`; DMs use the same shape with slug default `dm` (or `security.dm.slug`), and thin JSON `g` is `null`. Strip `d:` + JSON from visible chat; Discord OUT stays plain `body.content` only. See skill `discord-fleet-hop-shorthand`.
+
+Marketplace installers edit **their** bridge `security.json` (`dm.allowFrom`, `dm.defaultAgentId`, policy). Plugin variables remain `DISCORD_BOT_TOKEN` / optional guild / health URL only — do not ship another operator's agent IDs or guild snowflakes as product defaults.
+
 ### Optional durable Cloudflare tunnel
 
 Quick `trycloudflare.com` tunnels are temporary and stop when their `cloudflared` process stops. For durable self-hosted wake, use a named Cloudflare Tunnel with a supervised connector and your own public hostnames, for example:
@@ -149,7 +160,7 @@ Keep the bridge loopback-only behind the tunnel, rotate `CALLBACK_TOKEN`, and ke
 - `discord-fleet-status` — health/status checks via status MCP
 - `discord-fleet-manage` — channel-binding plans / gated inspect (dry-run / confirm)
 - `discord-fleet-bridge-setup` — **operator-driven** optional wake-bridge setup on an explicit ask (clone/deploy/verify `/healthz` on **your** host; never silent postinstall; never `curl|bash`; prefer plugin vars / vault→runtime env over plaintext `.env`). Skill includes short **Windows vs Linux** notes.
-- `discord-fleet-hop-shorthand` — inbound wake is exactly `d:<slug>:<msgId>`, thin JSON `{id,g,u,map}`, then human content; after decode/absorb, Grok chat shows **human content only** (strip `d:` + JSON); Discord OUT is plain `body.content` only — never put codes in channel replies; bridge callback still required
+- `discord-fleet-hop-shorthand` — inbound wake is exactly `d:<slug>:<msgId>` (guild slug from channel-map; DMs default slug `dm`, `g` may be `null`), thin JSON `{id,g,u,map}`, then human content; after decode/absorb, Grok chat shows **human content only** (strip `d:` + JSON); Discord OUT is plain `body.content` only — never put codes in channel/DM replies; same `/callback` with DM `channelId`; bridge callback still required
 
 ## Marketplace PR (later — not in this change)
 
