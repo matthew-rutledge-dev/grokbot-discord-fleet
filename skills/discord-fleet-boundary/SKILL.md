@@ -23,4 +23,4 @@ Any Discord fleet task: health, channel maps, bindings, wake questions, or "whic
 1. Status/health → skill `discord-fleet-status` + status MCP (uses **their** plugin vars).
 2. Binding / manage planning → skill `discord-fleet-manage` + manage MCP (dry-run / `confirm=true` reads).
 3. Actually waking a bot or editing live map/security → stop here; point at **their** optional self-hosted bridge (skill `discord-fleet-bridge-setup` on explicit ask). Do not invent wake calls from this plugin.
-4. Discord wake inbound / callback hop context → skill `discord-fleet-hop-shorthand` (decode/encode `d:<slug>:<message.id>`; never put codes in Discord channel replies).
+4. Discord wake inbound / callback hop context → skill `discord-fleet-hop-shorthand` (the only inbound shape is `d:<slug>:<msgId>`, thin JSON `{id,g,u,map}`, then human content; never put codes in Discord channel replies).

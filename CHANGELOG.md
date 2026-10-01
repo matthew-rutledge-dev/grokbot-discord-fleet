@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.6
+
+- Align `discord-fleet-hop-shorthand` with bridge commit `a6a26fb`: inbound wake is exactly `d:<slug>:<msgId>`, thin JSON `{id,g,u,map}`, then human content; the obsolete `[discord-bridge]` compatibility line is removed
+- Update README, boundary, and bridge-setup guidance to document the three-line wake shape
+- Bump plugin manifests to `0.3.6`
+
 ## 0.3.5
 
 - Add skill `discord-fleet-hop-shorthand`: decode/encode short wake envelope (`d:<slug>:<message.id>` + thin JSON `{id,g,u,map}`); Discord OUT is plain `body.content` only; bridge mints, bots decode
