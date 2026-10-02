@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.13
+
+- Document bridge-host hop timing telemetry for bottleneck diagnosis: one `[timing] key=val …` line per stage, with `stage`, `msg`, `hop=d:<slug>:<id>`, `ms`, `ok`, `attachments`, `chunks`, and optional `idle_ms` (from `sendPrompt` acceptance to callback via `replyToMessageId`). Stages are `authz`, `build_wake`, `sendPrompt`, `callback_auth`, `callback_resolve`, `callback_deliver`, and `callback_total`.
+- Timing logs live on the host bridge (Diablo for Matthew's deployment), not the marketplace MCP. Agents may still report `callback <status> attachments=N` evidence; they must not invent timing values.
+- Bump plugin manifests to `0.3.13`.
+
+<!-- Operator-only reference: timing helper deployed at bridge SHA `8ac3bfdf3c6ebf820f66a37d4bdd24e7ccc72c73` on live servergen1; caps/MIME are unchanged. -->
+
 ## 0.3.12
 
 - Outbound `POST /callback` MIME support adds zip/tar/gz/tgz/7z/rar mappings, matching bridge `48e6b699ef39273d23f4bf70b7a4299989b34f9e`; `.tar.gz` maps to `application/gzip` and `.tgz` to `application/x-gtar`.

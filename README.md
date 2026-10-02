@@ -162,6 +162,10 @@ Each attachment is **either** base64 inline **or** an https URL (XOR — not bot
 
 **Error codes (bridge):** `content_or_attachment_required`, `attachment_too_large`, `too_many_attachments`, `unsupported_media_type`, `attachment_fetch_failed`.
 
+### Bridge hop timing (host-side telemetry)
+
+A self-hosted bridge may emit one host-log `[timing] key=val …` line per stage for hop-latency diagnosis. Stages are `authz`, `build_wake`, `sendPrompt`, `callback_auth`, `callback_resolve`, `callback_deliver`, and `callback_total`. Fields include `stage`, `msg`, `hop=d:<slug>:<id>`, `ms`, `ok`, `attachments`, `chunks`, and optional `idle_ms` (from `sendPrompt` acceptance to callback via `replyToMessageId`). Timing lines contain no tokens or content. These logs belong to the bridge host, not this marketplace MCP; agents should not invent timings. Callback caps/MIME are unchanged.
+
 Never put hop codes (`d:…`) or thin JSON into Discord replies — human text and/or allowed attachments only.
 
 ### Inbound media (wake)

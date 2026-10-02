@@ -86,6 +86,10 @@ Strip `d:` + JSON from the visible Grok chat after absorb — same as guild. Dis
 
 Internal hop fields stay in agent context for callback threading. They are not re-echoed into the chat transcript or Discord.
 
+## Bridge hop timing (host-side)
+
+The bridge may emit one `[timing] key=val …` line per hop stage for bottleneck diagnosis: `authz`, `build_wake`, `sendPrompt`, `callback_auth`, `callback_resolve`, `callback_deliver`, and `callback_total`. Fields include `stage`, `msg`, `hop=d:<slug>:<id>`, `ms`, `ok`, `attachments`, `chunks`, and optional `idle_ms` (from `sendPrompt` acceptance to callback via `replyToMessageId`). These lines belong to the bridge host, not the marketplace MCP; agents do not invent timings. Keep the normal callback evidence line, such as `callback <status> attachments=N`, when available.
+
 ## Dual delivery (hard rule)
 
 After decoding a short hop, the agent **MUST** reply through the bridge `CALLBACK` to Discord, using the triggering hop for reply/thread targeting. Body may be plain `content`, allowed `attachments` (JSON base64/url or multipart files), or both (`content` optional when ≥1 attachment). For DMs, `channelId` is the DM channel snowflake (wake metadata `discordChannelId`) — same callback contract as guild. The agent **MAY ALSO** reply in Grok chat, but a Grok-chat reply does not replace the Discord callback. If the callback cannot be completed, report the delivery failure rather than treating chat-only output as complete.

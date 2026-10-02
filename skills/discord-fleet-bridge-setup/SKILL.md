@@ -45,6 +45,10 @@ Only when the user **explicitly** asks to set up, deploy, or verify the Discord 
 
 Keep the bridge bound to loopback (`127.0.0.1`) and route the named tunnel to it; do not expose the bridge port directly. Rotate `CALLBACK_TOKEN` whenever the callback is deployed, shared, or suspected exposed, and supply it through the host vault/runtime environment — never commit or print it. These routes are optional self-host configuration, not endpoints provided by this plugin.
 
+## Hop timing (optional bridge telemetry)
+
+A self-hosted bridge may emit one host-log `[timing] key=val …` line per hop stage for latency diagnosis: `authz`, `build_wake`, `sendPrompt`, `callback_auth`, `callback_resolve`, `callback_deliver`, and `callback_total`. Fields include `stage`, `msg`, `hop=d:<slug>:<id>`, `ms`, `ok`, `attachments`, `chunks`, and optional `idle_ms` (from `sendPrompt` acceptance to callback via `replyToMessageId`). Lines contain no tokens or content. This is host-side telemetry, not output from the marketplace MCP; agents must not invent timing values. Callback caps/MIME remain unchanged.
+
 ## Direct messages (DMs) on your bridge
 
 This plugin does **not** own wake. If you self-host the bridge and want DMs:
