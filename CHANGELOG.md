@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.11
+
+- Widen outbound `POST /callback` MIME support to office formats plus text/code types, matching bridge `b34f315fe416b12dee33cd843082cb2e3436974b`; when `contentType` is missing or `application/octet-stream`, use the documented filename-extension fallback.
+- Keep caps unchanged: ≤10 attachments, 8 MiB/file, 25 MiB total; `.zip`, `.exe`, `.dmg`, and `.iso` remain denied.
+- Update callback MIME guidance in the README, bridge-setup, hop-shorthand, and dual-deliver skill docs; bump plugin manifests to `0.3.11`.
+
+
 ## 0.3.10
 
 - Document Discord **media** for marketplace installers (optional self-hosted bridge; this plugin still does not own wake)
@@ -8,7 +15,7 @@
 - Skills: `discord-fleet-hop-shorthand`, `discord-fleet-bridge-setup`, `discord-fleet-boundary` — media notes with placeholders only
 - Bump plugin manifests to `0.3.10`
 
-<!-- Operator-only (not marketplace defaults): live bridge tip 669f383 on grok-bot-discord-bridge / servergen1 documents the media contract; do not publish operator hostnames, agent UUIDs, or secrets as product defaults. -->
+<!-- Operator-only (not marketplace defaults): live bridge tip b34f315fe416b12dee33cd843082cb2e3436974b on grok-bot-discord-bridge / servergen1 documents the media contract; do not publish operator hostnames, agent UUIDs, or secrets as product defaults. -->
 
 ## 0.3.9
 
