@@ -66,7 +66,7 @@ This plugin does **not** own wake. If you self-host the bridge and want DMs:
 | `ignoreBots` | Bot authors are ignored |
 | `security.dm.defaultAgentId` | **Required** for DMs — missing → deny `dm_no_agent`. Guild `channel-map.json` rows do **not** apply to DMs |
 
-**Outbound replies:** agents use the same bridge `POST /callback` as guild traffic. Prefer **Bearer** or **`x-callback-token`** headers (query `?token=` is being removed on the bridge next release). Text-only bodies remain valid.
+**Outbound replies:** agents use the same bridge `POST /callback` as guild traffic. Auth is **header-only** (bridge **0.2.4+**): `Authorization: Bearer <token>` or **`x-callback-token`**. Query `?token=` is **rejected (401)** — do not use. Text-only bodies remain valid.
 
 ```json
 {

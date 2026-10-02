@@ -145,7 +145,7 @@ Each marketplace installer creates **their own** Discord application and bot. Th
    - **Optional self-hosted wake bridge** (`matthew-rutledge-dev/grok-bot-discord-bridge`) — enable intents the bridge uses: **Message Content Intent** (privileged; required to read guild/DM message bodies for wake), plus non-privileged **Guilds**, **Guild Messages**, and **Direct Messages** when you want DM wake (see bridge README / skill `discord-fleet-bridge-setup`).
 4. **Invite the bot to your guild** — Portal → OAuth2 → **URL Generator**: scope **`bot`**; pick permissions your use case needs (typical fleet reply path: **View Channels**, **Send Messages**, **Read Message History**, **Attach Files**; add **Embed Links** if you want embeds). Open the generated URL while logged into Discord, select **your** guild, authorize.
 5. **Optional plugin vars** — `DISCORD_GUILD_ID` (default guild snowflake for status/manage tools); `DISCORD_BRIDGE_HEALTH_URL` (full URL to **your** bridge `GET /healthz`, e.g. `http://127.0.0.1:18083/healthz`) when you self-host a bridge.
-6. **Optional dual-deliver / self-callback** (separate self-hosted bridge) — file **`DISCORD_BRIDGE_CALLBACK_TOKEN`** + **`DISCORD_BRIDGE_CALLBACK_URL`** via secret cards (skill `discord-fleet-callback-setup`). Prefer **`Authorization: Bearer`** or **`x-callback-token`** headers on `POST /callback`. Query `?token=` is being removed on the bridge next release — use headers.
+6. **Optional dual-deliver / self-callback** (separate self-hosted bridge) — file **`DISCORD_BRIDGE_CALLBACK_TOKEN`** + **`DISCORD_BRIDGE_CALLBACK_URL`** via secret cards (skill `discord-fleet-callback-setup`). Auth is **header-only** as of bridge **0.2.4+**: `Authorization: Bearer <token>` or header **`x-callback-token`**. Query `?token=` is **rejected (401)** — do not use.
 7. **Skills** — bot/bridge bring-up: `discord-fleet-bridge-setup`; callback secrets: `discord-fleet-callback-setup`; wake hop / dual-deliver: `discord-fleet-hop-shorthand` (prefer `process.env.DISCORD_BRIDGE_CALLBACK_*` on each woken bot).
 
 ## Network endpoints (declare for operators / marketplace)
@@ -194,7 +194,7 @@ Typical self-host listens loopback-only (`127.0.0.1:18083`). Point `DISCORD_BRID
 
 ### Outbound media (`POST /callback`)
 
-Prefer **Bearer** or **`x-callback-token`** headers (query `?token=` is being removed on the bridge next release). Text-only bodies remain backward compatible. This plugin never calls `/callback`; document for installers' own bridge.
+Auth is **header-only** (bridge **0.2.4+**): `Authorization: Bearer <token>` or **`x-callback-token`**. Query `?token=` alone / no auth / wrong Bearer → **401**. Text-only bodies remain valid. This plugin never calls `/callback`; document for installers' own bridge.
 
 **JSON body**
 

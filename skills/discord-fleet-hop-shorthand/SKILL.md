@@ -102,7 +102,7 @@ After decoding a short hop, the agent **MUST** reply through the bridge `CALLBAC
 
 Prefer durable env (Bot Secrets / plugin vars) — **do not require a host-vault hop**:
 
-- `process.env.DISCORD_BRIDGE_CALLBACK_TOKEN` — prefer Bearer / `x-callback-token` headers for `POST /callback` (query `?token=` being removed on bridge next release)
+- `process.env.DISCORD_BRIDGE_CALLBACK_TOKEN` — send as `Authorization: Bearer <token>` or header `x-callback-token` on `POST /callback` (bridge **0.2.4+** header-only; query `?token=` → **401**)
 - `process.env.DISCORD_BRIDGE_CALLBACK_URL` — full URL or base ending in `/callback`
 
 File these via skill `discord-fleet-callback-setup`. **Never ask another agent** to deliver the Discord reply — self-callback only. A host vault `DISCORD_BRIDGE.callback_token` is optional legacy fallback only when env is missing.

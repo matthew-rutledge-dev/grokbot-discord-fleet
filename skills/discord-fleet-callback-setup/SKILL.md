@@ -33,7 +33,7 @@ Confirm they run a **self-hosted** wake bridge (`matthew-rutledge-dev/grok-bot-d
 
 ### b. Save callback token (secret)
 
-Ask them to save Bot Secret (or plugin variable) **`DISCORD_BRIDGE_CALLBACK_TOKEN`** via the **secure secret card** — never paste the value in chat. This is the same secret the bridge uses as `CALLBACK_TOKEN`. Prefer **`Authorization: Bearer`** or **`x-callback-token`** headers on `POST /callback` (query `?token=` is being removed on the bridge next release).
+Ask them to save Bot Secret (or plugin variable) **`DISCORD_BRIDGE_CALLBACK_TOKEN`** via the **secure secret card** — never paste the value in chat. This is the same secret the bridge uses as `CALLBACK_TOKEN`. Auth is **header-only** (bridge **0.2.4+**): `Authorization: Bearer <token>` or **`x-callback-token`** on `POST /callback`. Query `?token=` is **rejected (401)** — do not use.
 
 ### c. Save callback URL
 

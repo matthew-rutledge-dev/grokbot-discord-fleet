@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.21
+
+- Align callback auth docs with bridge **0.2.4+** header-only `/callback`: `Authorization: Bearer <token>` or `x-callback-token` only; query `?token=` rejected (**401**).
+- Update README, `discord-fleet-callback-setup`, `discord-fleet-bridge-setup`, `discord-fleet-hop-shorthand`.
+- Bump manifests, MCP packages, serverInfo, and Discord User-Agent to `0.3.21`.
+
+
 ## 0.3.20
 
 - Docs: add README **Discord bot token & invite** checklist (Developer Portal → bot token → intents → OAuth2 invite → optional guild/health/callback).
