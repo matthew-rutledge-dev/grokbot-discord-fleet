@@ -143,19 +143,70 @@ Each marketplace installer creates **their own** Discord application and bot. Th
 3. **Privileged Gateway Intents** (Portal → Bot → Privileged Gateway Intents) — match what you will run:
    - **This plugin alone** (Discord REST status/manage MCP) — **no** privileged gateway intents required (HTTP REST with the bot token only; this plugin does not open a Discord Gateway).
    - **Optional self-hosted wake bridge** (`matthew-rutledge-dev/grok-bot-discord-bridge`) — enable intents the bridge uses: **Message Content Intent** (privileged; required to read guild/DM message bodies for wake), plus non-privileged **Guilds**, **Guild Messages**, and **Direct Messages** when you want DM wake (see bridge README / skill `discord-fleet-bridge-setup`).
-4. **Invite the bot to your guild** — Portal → OAuth2 → **URL Generator**: scope **`bot`**; pick permissions your use case needs (typical fleet reply path: **View Channels**, **Send Messages**, **Read Message History**, **Attach Files**; add **Embed Links** if you want embeds). Open the generated URL while logged into Discord, select **your** guild, authorize.
+4. **Invite the bot to your guild** — Portal → OAuth2 → **URL Generator**: scope **`bot`**; select the permissions in **[Discord bot permissions](#discord-bot-permissions)** below (messaging minimum, plus moderation if you will use manage MCP timeout/kick/ban/delete/purge). Open the generated URL while logged into Discord, select **your** guild, authorize. **Creating a token does not grant channel access by itself** — see permissions section (role + channel overwrites).
 5. **Optional plugin vars** — `DISCORD_GUILD_ID` (default guild snowflake for status/manage tools); `DISCORD_BRIDGE_HEALTH_URL` (full URL to **your** bridge `GET /healthz`, e.g. `http://127.0.0.1:18083/healthz`) when you self-host a bridge.
 6. **Optional dual-deliver / self-callback** (separate self-hosted bridge) — file **`DISCORD_BRIDGE_CALLBACK_TOKEN`** + **`DISCORD_BRIDGE_CALLBACK_URL`** via secret cards (skill `discord-fleet-callback-setup`). Auth is **header-only** as of bridge **0.2.4+**: `Authorization: Bearer <token>` or header **`x-callback-token`**. Query `?token=` is **rejected (401)** — do not use.
 7. **Skills** — bot/bridge bring-up: `discord-fleet-bridge-setup`; callback secrets: `discord-fleet-callback-setup`; wake hop / dual-deliver: `discord-fleet-hop-shorthand` (prefer `process.env.DISCORD_BRIDGE_CALLBACK_*` on each woken bot).
+
+## Discord bot permissions
+
+Token creation ≠ automatic access. The bot can only act where **(1)** the invite OAuth permission bits allow it, **(2)** the bot’s **role** (and any extra roles you assign) grant those bits in the guild, **(3)** **channel permission overwrites** do not deny View/Send/History (or Manage Messages) for the bot’s role, and **(4)** for member actions (timeout / kick / ban) the bot’s **highest role sits above** the target member’s highest role (Discord role hierarchy). Private channels still need an explicit allow / role invite into that channel.
+
+### Messaging (status + post / history)
+
+| Permission (URL Generator name) | Bit | Needed for |
+|---------------------------------|-----|------------|
+| **View Channel** (View Channels) | `1 << 10` (1024) | `inspect_guild`, `resolve_channel`, `list_channel_messages`, `post_channel_message`, wake bridge listen |
+| **Send Messages** | `1 << 11` (2048) | `post_channel_message`; optional bridge `/callback` replies |
+| **Read Message History** | `1 << 16` (65536) | `list_channel_messages`, `purge_channel_messages` (fetch), history before post |
+| **Attach Files** | `1 << 15` (32768) | Optional; bridge outbound attachments / rich replies |
+| **Embed Links** | `1 << 14` (16384) | Optional; embeds in posts |
+
+**Messaging-only permission integer** (View + Send + History + Attach + Embed): **`117760`**.
+
+### Moderation (manage MCP 0.3.23+)
+
+| Permission | Bit | Needed for |
+|------------|-----|------------|
+| **Manage Messages** | `1 << 13` (8192) | `delete_message`, `purge_channel_messages` (others’ messages; bulk-delete) |
+| **Moderate Members** | `1 << 40` (1099511627776) | `timeout_member` (timeout / clear timeout) |
+| **Kick Members** | `1 << 1` (2) | `kick_member` |
+| **Ban Members** | `1 << 2` (4) | `ban_member`, `unban_member` |
+
+**Messaging + Manage Messages:** **`125952`**.
+
+**Full fleet (messaging + Manage Messages + Kick + Ban + Moderate Members):** **`1099511753734`**.
+
+### OAuth2 URL Generator — recreate invite
+
+1. Discord Developer Portal → your application → **OAuth2** → **URL Generator**.
+2. **Scopes:** check **`bot`** only (add `applications.commands` only if you later add slash commands — this plugin does not require it).
+3. **Bot Permissions:** either tick the named boxes above, **or** paste one of the integers into the permissions field / calculator:
+   - Messaging only: `117760`
+   - Messaging + Manage Messages: `125952`
+   - Full moderation set: `1099511753734`
+4. Copy the generated URL → open while logged into Discord → select **your** guild → authorize.
+5. In the guild: **Server Settings → Roles** — drag the bot’s role **above** any roles you may timeout/kick/ban; confirm channel overwrites allow **View Channel** (and Send / History / Manage Messages as needed) in target channels. Use manage MCP `check_bot_channel_permissions` (`confirm=true`) to verify.
+
+### How to add permissions later (without re-creating the bot)
+
+If the bot is already in the guild but moderation fails with Missing Permissions:
+
+1. **Re-invite with a higher permission integer** (same OAuth2 URL Generator steps; Discord merges/updates the bot’s granted bits on re-authorize), **or**
+2. **Server Settings → Roles → [Bot role]** — enable **Moderate Members**, **Kick Members**, **Ban Members**, **Manage Messages** (and messaging bits if missing).
+3. Fix **channel overwrites** on private channels (allow the bot role View/Send/History/Manage Messages).
+4. Fix **role hierarchy** (bot role above targets). Owner/admin can always re-order roles.
+
+All moderation manage tools still require **`confirm=true`** (dry-run preview without it). They never wake agents / call `sendPrompt`.
 
 ## Network endpoints (declare for operators / marketplace)
 
 | Endpoint | When | Purpose |
 |----------|------|---------|
-| `https://discord.com/api/v10/*` (Discord REST) | When `DISCORD_BOT_TOKEN` is set | Identity, guilds, channels (read-only from this plugin) |
+| `https://discord.com/api/v10/*` (Discord REST) | When `DISCORD_BOT_TOKEN` is set | Identity, guilds, channels; confirm-gated post / moderation via manage MCP |
 | Bridge `GET /healthz` at `DISCORD_BRIDGE_HEALTH_URL` | Optional (your bridge) | Liveness / `discordReady` probe — **not** wake / `sendPrompt` |
 
-No Discord message sends, no channel-map writes, no gateway listen from this plugin.
+Confirm-gated Discord REST from manage MCP may post / moderate when you call tools with `confirm=true`. No channel-map writes, no gateway listen, no wake / `sendPrompt` from this plugin.
 
 ## Plugin root path variables (honest)
 
@@ -182,7 +233,13 @@ Do **not** assume `${CURSOR_PLUGIN_ROOT}` works under Grok, or `${GROK_PLUGIN_RO
 - `resolve_channel` — Discord REST `GET /channels/{id}`; requires `confirm=true`
 - `list_channel_messages` — Discord REST recent messages (limit capped at 50); requires `confirm=true`
 - `post_channel_message` — Discord REST create message; dry-run without `confirm=true`; refuses empty content; returns message id
-- `check_bot_channel_permissions` — computed bot `VIEW_CHANNEL` / `SEND_MESSAGES` / `READ_MESSAGE_HISTORY` (+ related flags); requires `confirm=true`
+- `check_bot_channel_permissions` — computed bot View/Send/History/Manage Messages + Kick/Ban/Moderate flags; requires `confirm=true`
+- `timeout_member` — Moderate Members timeout (`durationSeconds=0` clears); dry-run without `confirm=true`
+- `kick_member` — Kick Members; dry-run without `confirm=true`
+- `ban_member` — Ban Members (optional `deleteMessageSeconds`); dry-run without `confirm=true`
+- `unban_member` — remove ban; dry-run without `confirm=true`
+- `delete_message` — delete one message; dry-run without `confirm=true`
+- `purge_channel_messages` — bulk-delete when Discord allows (≥2,<100, <14d) else single-delete / note limits; cap 100; dry-run without `confirm=true`
 
 ## Bridge HTTP (reference — optional self-host)
 

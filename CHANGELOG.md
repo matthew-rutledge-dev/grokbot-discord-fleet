@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.23
+
+- Manage MCP moderation slice (confirm-gated Discord REST; dry-run without `confirm=true`): `timeout_member`, `kick_member`, `ban_member`, `unban_member`, `delete_message`, `purge_channel_messages` (bulk-delete when Discord allows; cap 100; notes <14d / count limits).
+- Update `describe_manage_boundary` managePolicy; skills `discord-fleet-manage` / `discord-fleet-boundary`.
+- Docs: README **Discord bot permissions** (messaging + moderation checklist, OAuth2 URL Generator scopes/`bot`, permission integers `117760` / `125952` / `1099511753734`, role hierarchy, token ≠ channel access, how to add perms later). Expand bot-create checklist step 4.
+- Still no wake / sendPrompt / Gateway listen / bridge channel-map or security.json writes.
+- Bump manifests, MCP packages, serverInfo, and Discord User-Agent to `0.3.23`.
+
 ## 0.3.22
 
 - Manage MCP first action slice (confirm-gated Discord REST): `list_channel_messages`, `post_channel_message` (dry-run without confirm; refuses empty content; returns message id), `check_bot_channel_permissions` (computed View/Send/History + related flags).

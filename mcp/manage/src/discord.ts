@@ -1,10 +1,10 @@
 /**
  * Minimal Discord REST helpers (manage). Token from env only — never hardcoded.
- * Gated reads + confirm-gated message create. No wake / sendPrompt.
+ * Gated reads + confirm-gated writes (post / moderation). No wake / sendPrompt.
  */
 const API = "https://discord.com/api/v10";
 const UA =
-  "DiscordBot (https://github.com/matthew-rutledge-dev/grokbot-discord-fleet, 0.3.22)";
+  "DiscordBot (https://github.com/matthew-rutledge-dev/grokbot-discord-fleet, 0.3.23)";
 
 export class DiscordApiError extends Error {
   constructor(
@@ -36,12 +36,19 @@ async function discordRequest<T = unknown>(
   path: string,
   token: string,
   body?: unknown,
+  auditReason?: string,
 ): Promise<T> {
   const headers: Record<string, string> = {
     Authorization: `Bot ${token}`,
     "User-Agent": UA,
     Accept: "application/json",
   };
+  if (auditReason?.trim()) {
+    // Discord audit-log reason header (URL-encoded, max 512)
+    headers["X-Audit-Log-Reason"] = encodeURIComponent(
+      auditReason.trim().slice(0, 512),
+    );
+  }
   let payload: string | undefined;
   if (body !== undefined) {
     headers["Content-Type"] = "application/json";
@@ -74,8 +81,35 @@ export async function discordPost<T = unknown>(
   path: string,
   token: string,
   body: unknown,
+  auditReason?: string,
 ): Promise<T> {
-  return discordRequest<T>("POST", path, token, body);
+  return discordRequest<T>("POST", path, token, body, auditReason);
+}
+
+export async function discordPatch<T = unknown>(
+  path: string,
+  token: string,
+  body: unknown,
+  auditReason?: string,
+): Promise<T> {
+  return discordRequest<T>("PATCH", path, token, body, auditReason);
+}
+
+export async function discordPut<T = unknown>(
+  path: string,
+  token: string,
+  body?: unknown,
+  auditReason?: string,
+): Promise<T> {
+  return discordRequest<T>("PUT", path, token, body ?? {}, auditReason);
+}
+
+export async function discordDelete<T = unknown>(
+  path: string,
+  token: string,
+  auditReason?: string,
+): Promise<T> {
+  return discordRequest<T>("DELETE", path, token, undefined, auditReason);
 }
 
 export type DiscordUser = {
@@ -130,6 +164,7 @@ export type DiscordGuildMember = {
   user?: DiscordUser;
   roles: string[];
   nick?: string | null;
+  communication_disabled_until?: string | null;
 };
 
 export type DiscordMessage = {
@@ -144,6 +179,8 @@ export type DiscordMessage = {
 
 /** Discord permission bitflags used for fleet ops. */
 export const Perm = {
+  KICK_MEMBERS: 1n << 1n,
+  BAN_MEMBERS: 1n << 2n,
   ADMINISTRATOR: 1n << 3n,
   VIEW_CHANNEL: 1n << 10n,
   SEND_MESSAGES: 1n << 11n,
@@ -153,6 +190,7 @@ export const Perm = {
   READ_MESSAGE_HISTORY: 1n << 16n,
   MENTION_EVERYONE: 1n << 17n,
   ADD_REACTIONS: 1n << 6n,
+  MODERATE_MEMBERS: 1n << 40n,
 } as const;
 
 const CHANNEL_TYPE_NAMES: Record<number, string> = {
@@ -233,6 +271,9 @@ export function permissionFlags(perms: bigint): {
   can_embed_links: boolean;
   can_add_reactions: boolean;
   can_manage_messages: boolean;
+  can_kick_members: boolean;
+  can_ban_members: boolean;
+  can_moderate_members: boolean;
   administrator: boolean;
   raw: string;
   named: string[];
@@ -248,6 +289,9 @@ export function permissionFlags(perms: bigint): {
   if (has(Perm.EMBED_LINKS)) named.push("EMBED_LINKS");
   if (has(Perm.ADD_REACTIONS)) named.push("ADD_REACTIONS");
   if (has(Perm.MANAGE_MESSAGES)) named.push("MANAGE_MESSAGES");
+  if (has(Perm.KICK_MEMBERS)) named.push("KICK_MEMBERS");
+  if (has(Perm.BAN_MEMBERS)) named.push("BAN_MEMBERS");
+  if (has(Perm.MODERATE_MEMBERS)) named.push("MODERATE_MEMBERS");
   return {
     can_view: has(Perm.VIEW_CHANNEL),
     can_send: has(Perm.SEND_MESSAGES),
@@ -256,6 +300,9 @@ export function permissionFlags(perms: bigint): {
     can_embed_links: has(Perm.EMBED_LINKS),
     can_add_reactions: has(Perm.ADD_REACTIONS),
     can_manage_messages: has(Perm.MANAGE_MESSAGES),
+    can_kick_members: has(Perm.KICK_MEMBERS),
+    can_ban_members: has(Perm.BAN_MEMBERS),
+    can_moderate_members: has(Perm.MODERATE_MEMBERS),
     administrator: admin,
     raw: perms.toString(),
     named,
@@ -272,4 +319,23 @@ export function applyMemberOverwrite(
   const ow = overwrites.find((o) => o.id === memberId && o.type === 1);
   if (!ow) return perms;
   return applyOverwrite(perms, ow.allow, ow.deny);
+}
+
+/** Snowflake → approximate creation time (ms since epoch). */
+export function snowflakeToMs(id: string): number | null {
+  try {
+    const n = BigInt(id);
+    return Number((n >> 22n) + 1420070400000n);
+  } catch {
+    return null;
+  }
+}
+
+/** Discord bulk-delete: messages must be younger than 14 days. */
+export const BULK_DELETE_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+
+export function isBulkDeleteEligible(messageId: string, nowMs = Date.now()): boolean {
+  const created = snowflakeToMs(messageId);
+  if (created == null) return false;
+  return nowMs - created < BULK_DELETE_MAX_AGE_MS;
 }
