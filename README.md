@@ -16,7 +16,7 @@ Do not merge this plugin into the general/Betty catalog. Do not put secrets in g
 |-------|------|
 | `discord-fleet-status` MCP | Optional bridge `GET /healthz` probe + Discord REST identity/guild/channel reads |
 | `discord-fleet-manage` MCP | Boundary docs, dry-run channel-map plans, gated read helpers (`confirm=true`) |
-| Skills | Boundary, status, manage planning, operator-driven optional bridge setup, hop-shorthand encode/decode |
+| Skills | Boundary, status, manage planning, operator-driven optional bridge setup, **callback-setup** (self-callback secrets), hop-shorthand encode/decode |
 
 ## Layout (Grok-canonical)
 
@@ -68,13 +68,15 @@ Cursor uses `.cursor-plugin/plugin.json` and `mcp.json` (`${CURSOR_PLUGIN_ROOT}`
 
 ## Plugin variables (marketplace-friendly)
 
-Declared in `.grok-plugin/plugin.json`, root `plugin.json`, and `.cursor-plugin/plugin.json` as a JSON Schema `variables` object. MCP configs map them into process env via `${DISCORD_BOT_TOKEN}`, `${DISCORD_GUILD_ID}`, `${DISCORD_BRIDGE_HEALTH_URL}` — **no secret values in the repo**.
+Declared in `.grok-plugin/plugin.json`, root `plugin.json`, and `.cursor-plugin/plugin.json` as a JSON Schema `variables` object. MCP configs map them into process env via `${DISCORD_BOT_TOKEN}`, `${DISCORD_GUILD_ID}`, `${DISCORD_BRIDGE_HEALTH_URL}`, `${DISCORD_BRIDGE_CALLBACK_TOKEN}`, `${DISCORD_BRIDGE_CALLBACK_URL}` — **no secret values in the repo**.
 
 | Name | Required | Who sets it | Purpose |
 |------|----------|-------------|---------|
 | `DISCORD_BOT_TOKEN` | **Yes** (for Discord REST tools) | **Each installer — their own bot** | Bot token from the [Discord Developer Portal](https://discord.com/developers/applications). **Never commit.** |
 | `DISCORD_GUILD_ID` | Optional | Your guild snowflake | Default guild for channel/guild status tools |
 | `DISCORD_BRIDGE_HEALTH_URL` | Optional | Your self-hosted bridge | Full URL to **your** bridge `GET /healthz` (e.g. `http://127.0.0.1:18083/healthz`) |
+| `DISCORD_BRIDGE_CALLBACK_TOKEN` | Optional | Your bridge `CALLBACK_TOKEN` | Bearer for **your** bridge `POST /callback` (agent self-callback / dual-deliver). Prefer Bot Secrets. **Never commit.** |
+| `DISCORD_BRIDGE_CALLBACK_URL` | Optional | Your bridge callback | Full callback URL or base ending in `/callback` (placeholder `https://callback.example.com/callback`). Never ship real operator hosts. |
 
 ### Marketplace installers
 
@@ -82,6 +84,7 @@ Declared in `.grok-plugin/plugin.json`, root `plugin.json`, and `.cursor-plugin/
 2. Set plugin variable `DISCORD_BOT_TOKEN` to that token (Plugins → Configure / host env injection — **prefer vault → runtime env** over plaintext `.env` on disk when avoidable).
 3. Optionally set `DISCORD_GUILD_ID`.
 4. Optionally self-host the wake bridge on **your** machine and set `DISCORD_BRIDGE_HEALTH_URL` (see skill `discord-fleet-bridge-setup`). Skip if you only need Discord REST status/manage.
+5. For wake **self-callback / dual-deliver** without a host vault hop, file `DISCORD_BRIDGE_CALLBACK_TOKEN` + `DISCORD_BRIDGE_CALLBACK_URL` via skill `discord-fleet-callback-setup` (per-bot Secrets for multi-agent fleets).
 
 You are **not** connecting to another installer's Discord, vault, or provider. Missing token → Discord REST tools report graceful "not configured" messages.
 
@@ -129,7 +132,7 @@ From bridge README / `http-server.ts` (read-only reference repo):
 | Path | Method | Purpose |
 |------|--------|---------|
 | `/healthz` | GET | Liveness + `discordReady` / `hasTokenConfigured` |
-| `/callback` | POST | Agent → Discord delivery (Bearer / `x-callback-token` with `CALLBACK_TOKEN`) — **not used by this plugin** |
+| `/callback` | POST | Agent → Discord delivery (Bearer / `x-callback-token` with `CALLBACK_TOKEN`) — agents self-callback using `DISCORD_BRIDGE_CALLBACK_*` (skill `discord-fleet-callback-setup`); this plugin's MCP does not call `/callback` |
 
 Typical self-host listens loopback-only (`127.0.0.1:18083`). Point `DISCORD_BRIDGE_HEALTH_URL` at that URL (or a local SSH tunnel end).
 
@@ -187,7 +190,7 @@ Wake DMs are handled by **your** optional self-hosted bridge (not this plugin). 
 3. **Outbound** — Same `POST /callback` as guild: `{channelId, content?, agentId?, replyToMessageId?, attachments?}`. Discord DMs are channels — use the DM channel snowflake from wake metadata (`discordChannelId`). There is **no** separate `send_dm` MCP in this plugin.
 4. **Hop** — Guild wakes use `d:<channel-slug>:<msgId>`; DMs use the same shape with slug default `dm` (or `security.dm.slug`), and thin JSON `g` is `null` (optional `a:` for media). Strip `d:` + JSON from visible chat; Discord OUT is human text and/or allowed attachments — never hop codes. See skill `discord-fleet-hop-shorthand`.
 
-Marketplace installers edit **their** bridge `security.json` (`dm.allowFrom`, `dm.defaultAgentId`, policy). Plugin variables remain `DISCORD_BOT_TOKEN` / optional guild / health URL only — do not ship another operator's agent IDs or guild snowflakes as product defaults.
+Marketplace installers edit **their** bridge `security.json` (`dm.allowFrom`, `dm.defaultAgentId`, policy). Plugin variables are `DISCORD_BOT_TOKEN` / optional guild / health URL / optional callback token+URL — do not ship another operator's agent IDs, guild snowflakes, or real callback hosts as product defaults.
 
 ### Optional durable Cloudflare tunnel
 
@@ -201,11 +204,12 @@ GROK_BOT_SENDPROMPT_URL=https://sendprompt.example.com
 Keep the bridge loopback-only behind the tunnel, rotate `CALLBACK_TOKEN`, and keep secrets in the host vault/runtime environment. The tunnel and wake gateway are optional and are not provided by this plugin. For `/healthz`, keep using the existing loopback binding and SSH tunnel workflow rather than exposing the bridge port.
 ## Skills
 
-- `discord-fleet-boundary` — always on for fleet work; manage/status vs wake path; **per-installer credentials, not shared provider**
+- `discord-fleet-boundary` — always on for fleet work; manage/status vs wake path; **per-installer credentials, not shared provider**; points at callback token/URL + callback-setup for wake replies
 - `discord-fleet-status` — health/status checks via status MCP
 - `discord-fleet-manage` — channel-binding plans / gated inspect (dry-run / confirm)
-- `discord-fleet-bridge-setup` — **operator-driven** optional wake-bridge setup on an explicit ask (clone/deploy/verify `/healthz` on **your** host; never silent postinstall; never `curl|bash`; prefer plugin vars / vault→runtime env over plaintext `.env`). Skill includes short **Windows vs Linux** notes.
-- `discord-fleet-hop-shorthand` — inbound wake is exactly `d:<slug>:<msgId>` (guild slug from channel-map; DMs default slug `dm`, `g` may be `null`), thin JSON `{id,g,u,map}` with optional `a:` CDN attachment refs, then human content; after decode/absorb, Grok chat shows **human content only** (strip `d:` + JSON); Discord OUT is human text and/or allowed `/callback` attachments — never hop codes; same `/callback` with DM `channelId`; bridge callback still required
+- `discord-fleet-bridge-setup` — **operator-driven** optional wake-bridge setup on an explicit ask (clone/deploy/verify `/healthz` on **your** host; never silent postinstall; never `curl|bash`; prefer plugin vars / vault→runtime env over plaintext `.env`). After the bridge is up, run `discord-fleet-callback-setup` for agent self-callback. Skill includes short **Windows vs Linux** notes.
+- `discord-fleet-callback-setup` — **first-class** operator-driven setup for durable `DISCORD_BRIDGE_CALLBACK_TOKEN` + `DISCORD_BRIDGE_CALLBACK_URL` (secure secret card; verify present/missing only; safe curl smoke; per-bot Secrets for multi-agent fleets). Not silent postinstall.
+- `discord-fleet-hop-shorthand` — inbound wake is exactly `d:<slug>:<msgId>` (guild slug from channel-map; DMs default slug `dm`, `g` may be `null`), thin JSON `{id,g,u,map}` with optional `a:` CDN attachment refs, then human content; after decode/absorb, Grok chat shows **human content only** (strip `d:` + JSON); Discord OUT is human text and/or allowed `/callback` attachments — never hop codes; same `/callback` with DM `channelId`; dual-deliver prefers `process.env.DISCORD_BRIDGE_CALLBACK_*` (no rumble vault required; never ask Plug to deliver)
 
 ## Marketplace PR (later — not in this change)
 

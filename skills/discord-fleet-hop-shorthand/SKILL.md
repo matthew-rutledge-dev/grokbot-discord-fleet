@@ -98,6 +98,15 @@ After decoding a short hop, the agent **MUST** reply through the bridge `CALLBAC
 - **Optional:** Grok chat reply
 - **Incomplete:** Grok chat reply without the Discord callback
 
+### Credentials for self-callback
+
+Prefer durable env (Bot Secrets / plugin vars) — **do not require a rumble vault hop**:
+
+- `process.env.DISCORD_BRIDGE_CALLBACK_TOKEN` — Bearer for `POST /callback`
+- `process.env.DISCORD_BRIDGE_CALLBACK_URL` — full URL or base ending in `/callback`
+
+File these via skill `discord-fleet-callback-setup`. **Never ask Plug** (or any other agent) to deliver the Discord reply — self-callback only. A host vault `DISCORD_BRIDGE.callback_token` is optional legacy fallback only when env is missing.
+
 ## Encode (if an agent must pass context)
 
 When handing hop context to another agent or storing callback correlation, use the same form:
@@ -112,4 +121,5 @@ Optionally keep thin JSON `{id,g,u,map,a?}` in **agent-to-agent** context only �
 
 - Boundary: skill `discord-fleet-boundary`
 - Bridge setup / channel-map: skill `discord-fleet-bridge-setup`
+- Callback token/URL setup: skill `discord-fleet-callback-setup`
 - Bridge SoT: [matthew-rutledge-dev/grok-bot-discord-bridge](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge) (mint path; callback = `content` and/or allowed attachments)

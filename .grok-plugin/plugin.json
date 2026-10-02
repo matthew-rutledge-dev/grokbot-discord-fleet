@@ -1,7 +1,7 @@
 {
   "name": "grokbot-discord-fleet",
-  "version": "0.3.14",
-  "description": "Discord fleet manage/status MCP + skills (Discord REST + optional self-hosted bridge /healthz). Each installer uses their own bot token \u2014 not shared provider infra. Not the wake bridge.",
+  "version": "0.3.15",
+  "description": "Discord fleet manage/status MCP + skills (Discord REST + optional self-hosted bridge /healthz). Each installer uses their own bot token — not shared provider infra. Not the wake bridge.",
   "author": {
     "name": "Matthew Rutledge",
     "url": "https://github.com/matthew-rutledge-dev"
@@ -25,17 +25,27 @@
       "DISCORD_BOT_TOKEN": {
         "type": "string",
         "title": "Discord bot token",
-        "description": "YOUR Discord bot token for REST reads (Discord Developer Portal). Each marketplace installer supplies their own bot \u2014 not another installer's vault or a shared provider. Never commit."
+        "description": "YOUR Discord bot token for REST reads (Discord Developer Portal). Each marketplace installer supplies their own bot — not another installer's vault or a shared provider. Never commit."
       },
       "DISCORD_GUILD_ID": {
         "type": "string",
         "title": "Default Discord guild ID",
-        "description": "Optional. Default guild snowflake for channel/guild status tools \u2014 your guild, not a shared one."
+        "description": "Optional. Default guild snowflake for channel/guild status tools — your guild, not a shared one."
       },
       "DISCORD_BRIDGE_HEALTH_URL": {
         "type": "string",
         "title": "Bridge health URL",
         "description": "Optional. Full URL to YOUR self-hosted wake-bridge GET /healthz (e.g. http://127.0.0.1:18083/healthz). Omit if you are not running a bridge."
+      },
+      "DISCORD_BRIDGE_CALLBACK_TOKEN": {
+        "type": "string",
+        "title": "Bridge callback token",
+        "description": "Optional. Bearer token for YOUR bridge POST /callback (same secret as bridge CALLBACK_TOKEN). Used for agent self-callback / dual-deliver without a host vault hop. Never commit."
+      },
+      "DISCORD_BRIDGE_CALLBACK_URL": {
+        "type": "string",
+        "title": "Bridge callback URL",
+        "description": "Optional. Full callback URL or base ending in /callback for YOUR bridge (placeholder example https://callback.example.com/callback). Never ship real operator hosts."
       }
     },
     "required": [

@@ -23,14 +23,14 @@ Only when the user **explicitly** asks to set up, deploy, or verify the Discord 
 
 | Audience | How secrets are supplied |
 |----------|--------------------------|
-| **Marketplace installer** | Plugin variables (`DISCORD_BOT_TOKEN`, optional `DISCORD_GUILD_ID`, optional `DISCORD_BRIDGE_HEALTH_URL`) pointing at **their** bot / **their** self-hosted `/healthz`. |
+| **Marketplace installer** | Plugin variables (`DISCORD_BOT_TOKEN`, optional `DISCORD_GUILD_ID`, optional `DISCORD_BRIDGE_HEALTH_URL`, optional `DISCORD_BRIDGE_CALLBACK_TOKEN` / `DISCORD_BRIDGE_CALLBACK_URL`) pointing at **their** bot / **their** self-hosted `/healthz` and `/callback`. |
 | **Self-hosted operator** | The installer's host vault or plugin variables → runtime env on the installer's wake host. Not a shared provider. |
 
 ## Windows vs Linux (operators)
 
 | Topic | Notes |
 |-------|--------|
-| Env / plugin vars | Same names on both: `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_BRIDGE_HEALTH_URL` (plugin vars or vault→env — never commit). |
+| Env / plugin vars | Same names on both: `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_BRIDGE_HEALTH_URL`, `DISCORD_BRIDGE_CALLBACK_TOKEN`, `DISCORD_BRIDGE_CALLBACK_URL` (plugin vars or vault→env — never commit). |
 | Health URL | Self-hosted bridge typically listens loopback-only (e.g. `http://127.0.0.1:18083/healthz`). From another machine, open an **SSH tunnel** (or WSL → SSH), then set `DISCORD_BRIDGE_HEALTH_URL` to the local tunnel end. Example: `ssh -L 18083:127.0.0.1:18083 user@your-host`. |
 | Deploy path | Use **your own** deploy path on **your** machine; do not point marketplace installers at another operator's host. |
 | Windows local | Fine for **local smoke** of this plugin's MCP/skills and optional local bridge. Prefer plugin vars over plaintext `.env` when avoidable. |
@@ -100,9 +100,14 @@ Discord DMs are channels; there is **no** `send_dm` tool in this plugin. Use pla
 - Confirmation that `DISCORD_BRIDGE_HEALTH_URL` was set (value may be shown; **never** the bot token)
 - Note on credential path used (plugin vars / vault→env vs unavoidable local `.env` — without printing secrets)
 
+## After the bridge is up — callback setup (required for agent self-callback)
+
+Wake dual-deliver needs agents to `POST /callback` themselves. After health verifies, run skill **`discord-fleet-callback-setup`** so the installer files durable Bot Secrets / plugin vars `DISCORD_BRIDGE_CALLBACK_TOKEN` and `DISCORD_BRIDGE_CALLBACK_URL` (no host vault hop). This is a first-class setup step, not docs-only. For multi-agent fleets, each mapped agent needs the same Secrets.
+
 ## Related
 
 - Boundary: skill `discord-fleet-boundary`
 - After setup: skill `discord-fleet-status` + status MCP `fleet_health`
+- **Required for self-callback:** skill `discord-fleet-callback-setup`
 - Wake hop encode/decode: inbound is exactly `d:<slug>:<msgId>` (DM slug default `dm`; `g` may be `null`), thin JSON `{id,g,u,map,a?}`, then human content; skill `discord-fleet-hop-shorthand` — Discord OUT is human text and/or allowed `/callback` attachments (same `/callback` for DM `channelId`)
 - Bridge SoT: [matthew-rutledge-dev/grok-bot-discord-bridge](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge)

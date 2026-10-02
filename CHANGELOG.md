@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.15
+
+- First-class **self-callback setup** without host vault hop: optional plugin vars `DISCORD_BRIDGE_CALLBACK_TOKEN` (Bearer for YOUR bridge `POST /callback`) and `DISCORD_BRIDGE_CALLBACK_URL` (full URL or base ending in `/callback`; placeholder `https://callback.example.com/callback` only).
+- Pass both vars through `.mcp.json` / `mcp.json` env maps for status and manage servers (consistency / future use).
+- New skill `discord-fleet-callback-setup`: operator-driven verify + safe curl smoke (`callback_setup http=<code> token_set=… url_set=…`); per-bot Secrets required for multi-agent fleets.
+- Skills: `discord-fleet-boundary`, `discord-fleet-bridge-setup`, `discord-fleet-hop-shorthand` — prefer env callback token/URL for dual-deliver; do not require rumble vault; never ask Plug to deliver.
+- Bump plugin manifests to `0.3.15`.
+
 ## 0.3.14
 
 - Scrub operator host paths, vault key names, and unrelated GovInfo backlog from the marketplace surface.
