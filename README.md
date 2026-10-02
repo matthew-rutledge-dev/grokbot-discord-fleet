@@ -25,8 +25,9 @@ Do not merge this plugin into a shared general catalog without an explicit maint
 | `.grok-plugin/plugin.json` | **Primary** Grok Build / marketplace manifest (includes `variables`) |
 | `.mcp.json` | MCP servers for Grok (catalog default name); env maps `${DISCORD_*}` |
 | `skills/` | Skill folders with `SKILL.md` |
-| `mcp/status`, `mcp/manage` | Local stdio MCP TypeScript sources (`npm start` after bootstrap) |
-| `scripts/bootstrap-mcp.sh` | **Required** post-clone `npm ci` for both MCP packages |
+| `mcp/status`, `mcp/manage` | Local stdio MCP TypeScript sources (start via `node` + local `tsx` after bootstrap) |
+| `scripts/bootstrap-mcp.sh` | **Required** post-clone `npm ci` (Linux / macOS / Git Bash) |
+| `scripts/bootstrap-mcp.ps1` | **Required** post-clone `npm ci` on native Windows PowerShell |
 | `assets/logo.svg` | Marketplace logo (referenced from manifests) |
 | `.cursor-plugin/plugin.json` + `mcp.json` | Optional Cursor dual-support |
 
@@ -43,7 +44,7 @@ grok plugin marketplace list
 grok plugin install grokbot-discord-fleet --trust
 ```
 
-Then run **Post-clone MCP deps** (`./scripts/bootstrap-mcp.sh` from the installed plugin root) unless the host documents that it already ran `npm ci` for plugin MCP packages. Set **plugin variables** (below) to **your** Discord bot token — not anyone else's. Marketplace remote entries must pin a full 40-character commit SHA.
+Then run **Post-clone MCP deps** (`./scripts/bootstrap-mcp.sh` or `.\scripts\bootstrap-mcp.ps1` from the installed plugin root) unless the host documents that it already ran `npm ci` for plugin MCP packages. Set **plugin variables** (below) to **your** Discord bot token — not anyone else's. Marketplace remote entries must pin a full 40-character commit SHA.
 
 ### From this repo now (before marketplace PR)
 
@@ -55,6 +56,8 @@ mkdir -p ~/.grok/plugins
 git clone https://github.com/matthew-rutledge-dev/grokbot-discord-fleet.git ~/.grok/plugins/grokbot-discord-fleet
 # Required: install MCP package dependencies (first-time + after pull when lockfiles change)
 ~/.grok/plugins/grokbot-discord-fleet/scripts/bootstrap-mcp.sh
+# Windows PowerShell:
+#   ~/.grok/plugins/grokbot-discord-fleet/scripts/bootstrap-mcp.ps1
 # or: grok --plugin-dir /path/to/grokbot-discord-fleet …
 ```
 
@@ -68,20 +71,37 @@ cp -a /path/to/grokbot-discord-fleet ~/.cursor/plugins/local/grokbot-discord-fle
 # or: ln -s /path/to/grokbot-discord-fleet ~/.cursor/plugins/local/grokbot-discord-fleet
 # Required: install MCP package dependencies
 ~/.cursor/plugins/local/grokbot-discord-fleet/scripts/bootstrap-mcp.sh
+# Windows PowerShell:
+#   ~/.cursor/plugins/local/grokbot-discord-fleet/scripts/bootstrap-mcp.ps1
 ```
 
-Cursor uses `.cursor-plugin/plugin.json` and `mcp.json` (`${CURSOR_PLUGIN_ROOT}`). Set variables under Plugins → Configure (or equivalent). MCP servers start with `npm start` in `mcp/status` and `mcp/manage` — they fail until bootstrap has run.
+Cursor uses `.cursor-plugin/plugin.json` and `mcp.json` (`${CURSOR_PLUGIN_ROOT}`). Set variables under Plugins → Configure (or equivalent). MCP servers start with **`node ./node_modules/tsx/dist/cli.mjs src/index.ts`** in each package cwd (portable on Windows and Linux — avoids fragile bare `npm` / `npm.cmd` stdio spawns). They fail until bootstrap has run.
 
 ### Post-clone MCP deps (required)
 
 Both MCP servers are TypeScript and need local `node_modules` (including `@modelcontextprotocol/sdk` and `tsx`). **README-only install without this step leaves MCP unloadable.**
 
+**Prereqs:** Node.js LTS on `PATH` (`node` and `npm` / `npm.cmd`).
+
 ```bash
-# From the plugin root (clone or local install path):
+# Linux / macOS / Git Bash — from the plugin root:
 ./scripts/bootstrap-mcp.sh
 # equivalent:
 #   (cd mcp/status && npm ci) && (cd mcp/manage && npm ci)
 ```
+
+```powershell
+# Windows native PowerShell — from the plugin root:
+.\scripts\bootstrap-mcp.ps1
+# If script execution is blocked for the session:
+#   powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap-mcp.ps1
+```
+
+**Windows notes (marketplace / Cursor):**
+- Prefer `bootstrap-mcp.ps1` on PowerShell. Git Bash works with `bootstrap-mcp.sh` (script is LF via `.gitattributes`; hardened so `pipefail` does not break older Git Bash).
+- MCP configs use `command: node` + `./node_modules/tsx/dist/cli.mjs` (not bare `npm start`) so stdio launch does not hang on `npm`/`npm.cmd` resolution.
+- If a `.sh` file was somehow checked out with CRLF and the shebang fails: `bash scripts/bootstrap-mcp.sh` or convert with `sed -i 's/\r$//' scripts/bootstrap-mcp.sh`.
+- Plugin root placeholders: Cursor `${CURSOR_PLUGIN_ROOT}` in `mcp.json`; Grok `${GROK_PLUGIN_ROOT}` in `.mcp.json`. Paths use forward slashes; Node on Windows accepts them when `cwd` is set.
 
 Re-run after pulling commits that change `mcp/*/package-lock.json`. No postinstall hooks ship in this repo — bootstrap is an explicit operator step (never silent RCE).
 

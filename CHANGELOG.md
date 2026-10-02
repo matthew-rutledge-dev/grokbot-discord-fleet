@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.19
+
+- **Windows + Linux marketplace readiness:** add `scripts/bootstrap-mcp.ps1`; harden `scripts/bootstrap-mcp.sh` (no hard `pipefail` dependency; node/npm presence checks; Git Bash friendly).
+- Force LF for `*.sh` / `*.ps1` via `.gitattributes` to avoid CRLF shebang / `set -o` breakage under Git Bash.
+- MCP configs (`.mcp.json` / `mcp.json`) start with portable `node ./node_modules/tsx/dist/cli.mjs src/index.ts` (cwd per package) instead of bare `npm start` — avoids Windows stdio hangs when `npm` is not fully resolved.
+- Align MCP `serverInfo`, Discord User-Agent, package.json, and manifests to `0.3.19`.
+- README: dual bootstrap docs, Windows notes for Cursor/Git Bash/`npm.cmd`, document node+tsx launch.
+
+## 0.3.18
+
+- Marketplace logo from Flux public-site preview (`assets/logo.svg`).
+- Bump MCP `package.json` versions toward plugin semver `0.3.18` (serverInfo alignment completed in `0.3.19`).
+
 ## 0.3.17
 
 - **First-time install fix:** document and ship `scripts/bootstrap-mcp.sh` (`npm ci` in `mcp/status` + `mcp/manage`). README Cursor/Grok install paths require this before MCP start.

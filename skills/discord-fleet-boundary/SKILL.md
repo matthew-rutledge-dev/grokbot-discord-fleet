@@ -12,7 +12,7 @@ Any Discord fleet task: health, channel maps, bindings, wake questions, or "whic
 ## Hard boundary
 
 - **This plugin** = manage + status MCP (Discord REST reads + optional bridge `/healthz`) and skills only.
-- **First-time / local clone:** after copying the plugin tree, run `./scripts/bootstrap-mcp.sh` (or `npm ci` in `mcp/status` and `mcp/manage`) before expecting status/manage MCP to load. No silent postinstall.
+- **First-time / local clone:** after copying the plugin tree, run `./scripts/bootstrap-mcp.sh` or `.\scripts\bootstrap-mcp.ps1` (or `npm ci` in `mcp/status` and `mcp/manage`) before expecting status/manage MCP to load. No silent postinstall.
 - **Wake path** = separate, **optional**, and **self-hosted by the operator**: `matthew-rutledge-dev/grok-bot-discord-bridge` on **their** machine. Gateway → `sendPrompt` / webhook via that bridge — not this plugin. Marketplace installers use their own Discord and infrastructure.
 - **Credentials are per-installer.** Set plugin variables `DISCORD_BOT_TOKEN` (required for Discord REST), optional `DISCORD_GUILD_ID`, optional `DISCORD_BRIDGE_HEALTH_URL`, optional `DISCORD_BRIDGE_CALLBACK_TOKEN` / `DISCORD_BRIDGE_CALLBACK_URL` (for wake self-callback / dual-deliver without a host vault hop — see skill `discord-fleet-callback-setup`). Prefer vault → runtime env over plaintext `.env` on disk when avoidable. Never put secrets in git or in this plugin tree.
 - **Not a shared provider.** Each installation supplies its own host vault, plugin variables, credentials, and deploy path; these are never marketplace defaults.
