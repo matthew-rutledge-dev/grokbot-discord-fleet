@@ -9,5 +9,7 @@ No secrets in this file.
 
 ## Done
 
+- Manage MCP action slice (0.3.22): list_channel_messages, post_channel_message, check_bot_channel_permissions (confirm-gated; no wake).
+
 - Discord media docs (0.3.10): inbound thin-JSON `a:` CDN refs + outbound `/callback` attachments (JSON/multipart); marketplace placeholders only; plugin still does not own wake.
 - Plugin layout + Discord manage/status MCP (0.2.0): Discord REST + optional bridge `/healthz`; dry-run / confirm-gated manage; skills; pushed to the marketplace repository.

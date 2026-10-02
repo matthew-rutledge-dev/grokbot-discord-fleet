@@ -15,7 +15,7 @@ Do not merge this plugin into a shared general catalog without an explicit maint
 | Piece | Role |
 |-------|------|
 | `discord-fleet-status` MCP | Optional bridge `GET /healthz` probe + Discord REST identity/guild/channel reads |
-| `discord-fleet-manage` MCP | Boundary docs, dry-run channel-map plans, gated read helpers (`confirm=true`) |
+| `discord-fleet-manage` MCP | Boundary docs, dry-run channel-map plans, gated Discord REST (`confirm=true`): inspect/resolve, message history, post message, bot channel perms |
 | Skills | Boundary, status, manage planning, operator-driven optional bridge setup, **callback-setup** (self-callback secrets), hop-shorthand encode/decode |
 
 ## Layout (Grok-canonical)
@@ -176,10 +176,13 @@ Do **not** assume `${CURSOR_PLUGIN_ROOT}` works under Grok, or `${GROK_PLUGIN_RO
 
 ### Manage tools (`discord-fleet-manage`)
 
-- `describe_manage_boundary` — this plugin does **not** wake bots / call `sendPrompt`
+- `describe_manage_boundary` — this plugin does **not** wake bots / call `sendPrompt`; lists confirm-gated tools
 - `plan_channel_binding` — dry-run draft row for bridge `channel-map.json` (no writes)
 - `inspect_guild` — Discord REST guild/roles/channels snapshot; requires `confirm=true`
 - `resolve_channel` — Discord REST `GET /channels/{id}`; requires `confirm=true`
+- `list_channel_messages` — Discord REST recent messages (limit capped at 50); requires `confirm=true`
+- `post_channel_message` — Discord REST create message; dry-run without `confirm=true`; refuses empty content; returns message id
+- `check_bot_channel_permissions` — computed bot `VIEW_CHANNEL` / `SEND_MESSAGES` / `READ_MESSAGE_HISTORY` (+ related flags); requires `confirm=true`
 
 ## Bridge HTTP (reference — optional self-host)
 
@@ -263,7 +266,7 @@ Keep the bridge loopback-only behind the tunnel, rotate `CALLBACK_TOKEN`, and ke
 
 - `discord-fleet-boundary` — always on for fleet work; manage/status vs wake path; **per-installer credentials, not shared provider**; points at callback token/URL + callback-setup for wake replies
 - `discord-fleet-status` — health/status checks via status MCP
-- `discord-fleet-manage` — channel-binding plans / gated inspect (dry-run / confirm)
+- `discord-fleet-manage` — channel-binding plans / gated inspect + message history / post / bot channel perms (dry-run / confirm)
 - `discord-fleet-bridge-setup` — **operator-driven** optional wake-bridge setup on an explicit ask (clone/deploy/verify `/healthz` on **your** host; never silent postinstall; never `curl|bash`; prefer plugin vars / vault→runtime env over plaintext `.env`). After the bridge is up, run `discord-fleet-callback-setup` for agent self-callback. Skill includes short **Windows vs Linux** notes.
 - `discord-fleet-callback-setup` — **first-class** operator-driven setup for durable `DISCORD_BRIDGE_CALLBACK_TOKEN` + `DISCORD_BRIDGE_CALLBACK_URL` (secure secret card; verify present/missing only; safe curl smoke; per-bot Secrets for multi-agent fleets). Not silent postinstall.
 - `discord-fleet-hop-shorthand` — inbound wake is exactly `d:<slug>:<msgId>` (guild slug from channel-map; DMs default slug `dm`, `g` may be `null`), thin JSON `{id,g,u,map}` with optional `a:` CDN attachment refs, then human content; after decode/absorb, Grok chat shows **human content only** (strip `d:` + JSON); Discord OUT is human text and/or allowed `/callback` attachments — never hop codes; same `/callback` with DM `channelId`; dual-deliver prefers `process.env.DISCORD_BRIDGE_CALLBACK_*` (no host-vault hop required; never ask another agent to deliver)

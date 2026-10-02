@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.22
+
+- Manage MCP first action slice (confirm-gated Discord REST): `list_channel_messages`, `post_channel_message` (dry-run without confirm; refuses empty content; returns message id), `check_bot_channel_permissions` (computed View/Send/History + related flags).
+- Update `describe_manage_boundary` managePolicy; skills `discord-fleet-manage` / `discord-fleet-boundary`; README manage tools list.
+- Still no wake / sendPrompt / Gateway listen / bridge channel-map or security.json writes.
+- Bump manifests, MCP packages, serverInfo, and Discord User-Agent to `0.3.22`.
+
 ## 0.3.21
 
 - Align callback auth docs with bridge **0.2.4+** header-only `/callback`: `Authorization: Bearer <token>` or `x-callback-token` only; query `?token=` rejected (**401**).

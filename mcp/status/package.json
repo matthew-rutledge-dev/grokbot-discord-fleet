@@ -1,6 +1,6 @@
 {
   "name": "discord-fleet-status-mcp",
-  "version": "0.3.21",
+  "version": "0.3.22",
   "private": true,
   "type": "module",
   "description": "MCP server: Discord fleet status via bridge /healthz + Discord REST reads",
