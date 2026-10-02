@@ -1,7 +1,7 @@
 {
   "name": "grokbot-discord-fleet",
   "displayName": "Grok Bot Discord Fleet",
-  "version": "0.3.23",
+  "version": "0.3.24",
   "description": "Discord fleet manage/status MCP + skills (Discord REST + optional self-hosted bridge /healthz). Each installer uses their own bot token \u2014 not shared provider infra. Not the wake bridge.",
   "author": {
     "name": "Matthew Rutledge"
@@ -31,7 +31,7 @@
       "DISCORD_BOT_TOKEN": {
         "type": "string",
         "title": "Discord bot token",
-        "description": "YOUR Discord bot token for REST reads (Discord Developer Portal). Each marketplace installer supplies their own bot \u2014 not another installer's vault or a shared provider. Never commit."
+        "description": "YOUR Discord bot token for required Discord REST status/manage tools (Discord Developer Portal). Each marketplace installer supplies their own bot \u2014 not another installer's vault or a shared provider. Never commit."
       },
       "DISCORD_GUILD_ID": {
         "type": "string",

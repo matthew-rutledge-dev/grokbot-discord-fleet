@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.24
+
+- Align Grok-primary marketplace documentation with the open xAI catalog PR (#1088) and post-merge install commands.
+- Clarify that `DISCORD_BOT_TOKEN` is required for Discord REST status/manage functionality; bridge health alone is only an optional liveness probe.
+- Remove unused callback secret/url injection from `.mcp.json`; callback variables remain available in manifests for operator-driven skills.
+- Sync plugin manifests, MCP packages, server metadata, and Discord User-Agent to `0.3.24`.
+
 ## 0.3.23
 
 - Manage MCP moderation slice (confirm-gated Discord REST; dry-run without `confirm=true`): `timeout_member`, `kick_member`, `ban_member`, `unban_member`, `delete_message`, `purge_channel_messages` (bulk-delete when Discord allows; cap 100; notes <14d / count limits).

@@ -41,7 +41,7 @@ const CHANNEL_MAP_SCHEMA = {
 };
 
 const server = new Server(
-  { name: "discord-fleet-status", version: "0.3.23" },
+  { name: "discord-fleet-status", version: "0.3.24" },
   { capabilities: { tools: {} } },
 );
 
@@ -199,7 +199,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return jsonResult({
         ok,
         plugin: "discord-fleet-status",
-        version: "0.3.23",
+        version: "0.3.24",
         wakesBots: false,
         bridgeRepo: BRIDGE_REPO,
         wakeHostHint: WAKE_HOST_HINT,

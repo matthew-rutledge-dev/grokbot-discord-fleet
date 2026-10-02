@@ -35,18 +35,18 @@ Marketplace index tooling (`xai-org/plugin-marketplace`) discovers `.grok-plugin
 
 ## Install — Grok Build
 
-### After marketplace listing (later)
+### Grok Build marketplace install
 
-Once listed in [xai-org/plugin-marketplace](https://github.com/xai-org/plugin-marketplace):
+The official [xAI plugin-marketplace PR #1088](https://github.com/xai-org/plugin-marketplace/pull/1088) is open for this plugin. After xAI merges it, install the catalog entry with:
 
 ```bash
 grok plugin marketplace list
 grok plugin install grokbot-discord-fleet --trust
 ```
 
-Then run **Post-clone MCP deps** (`./scripts/bootstrap-mcp.sh` or `.\scripts\bootstrap-mcp.ps1` from the installed plugin root) unless the host documents that it already ran `npm ci` for plugin MCP packages. Set **plugin variables** (below) to **your** Discord bot token — not anyone else's. Marketplace remote entries must pin a full 40-character commit SHA.
+Then run **Post-clone MCP deps** (`./scripts/bootstrap-mcp.sh` or `.\scripts\bootstrap-mcp.ps1` from the installed plugin root) unless the host documents that it already ran `npm ci` for plugin MCP packages. Set **plugin variables** (below) to **your** Discord bot token — not anyone else's. The marketplace entry is SHA-pinned to this repository; do not replace it with an unpinned remote.
 
-### From this repo now (before marketplace PR)
+### Local/manual install
 
 Grok loads plugins from `./.grok/plugins/`, `~/.grok/plugins/`, config `[plugins] paths`, or `--plugin-dir`:
 
@@ -107,11 +107,11 @@ Re-run after pulling commits that change `mcp/*/package-lock.json`. No postinsta
 
 ## Plugin variables (marketplace-friendly)
 
-Declared in `.grok-plugin/plugin.json`, root `plugin.json`, and `.cursor-plugin/plugin.json` as a JSON Schema `variables` object. MCP configs map them into process env via `${DISCORD_BOT_TOKEN}`, `${DISCORD_GUILD_ID}`, `${DISCORD_BRIDGE_HEALTH_URL}`, `${DISCORD_BRIDGE_CALLBACK_TOKEN}`, `${DISCORD_BRIDGE_CALLBACK_URL}` — **no secret values in the repo**.
+Declared in `.grok-plugin/plugin.json`, root `plugin.json`, and `.cursor-plugin/plugin.json` as a JSON Schema `variables` object. MCP configs inject the variables used by the MCP servers (`DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, and `DISCORD_BRIDGE_HEALTH_URL`) into their process environments. Callback variables remain manifest-declared for operator-driven skills/Bot Secrets and are not used by these MCP servers — **no secret values in the repo**.
 
 | Name | Required | Who sets it | Purpose |
 |------|----------|-------------|---------|
-| `DISCORD_BOT_TOKEN` | **Yes** (for Discord REST tools) | **Each installer — their own bot** | Bot token from the [Discord Developer Portal](https://discord.com/developers/applications). **Never commit.** |
+| `DISCORD_BOT_TOKEN` | **Yes** (required product input) | **Each installer — their own bot** | Required for Discord REST status/manage tools (identity, reads, posts, permissions, and moderation). Get it from the [Discord Developer Portal](https://discord.com/developers/applications). **Never commit.** |
 | `DISCORD_GUILD_ID` | Optional | Your guild snowflake | Default guild for channel/guild status tools |
 | `DISCORD_BRIDGE_HEALTH_URL` | Optional | Your self-hosted bridge | Full URL to **your** bridge `GET /healthz` (e.g. `http://127.0.0.1:18083/healthz`) |
 | `DISCORD_BRIDGE_CALLBACK_TOKEN` | Optional | Your bridge `CALLBACK_TOKEN` | Bearer for **your** bridge `POST /callback` (agent self-callback / dual-deliver). Prefer Bot Secrets. **Never commit.** |
@@ -125,7 +125,7 @@ Follow **[Discord bot token & invite](#discord-bot-token--invite)** below for th
 2. Optionally set `DISCORD_GUILD_ID` and/or `DISCORD_BRIDGE_HEALTH_URL` (self-hosted bridge `/healthz` — skill `discord-fleet-bridge-setup`).
 3. For wake **self-callback / dual-deliver**, file `DISCORD_BRIDGE_CALLBACK_TOKEN` + `DISCORD_BRIDGE_CALLBACK_URL` via skill `discord-fleet-callback-setup` (per-bot Secrets for multi-agent fleets).
 
-You are **not** connecting to another installer's Discord, vault, or provider. Missing token → Discord REST tools report graceful "not configured" messages.
+You are **not** connecting to another installer's Discord, vault, or provider. `DISCORD_BOT_TOKEN` is required for the product: without it, the Discord REST status/manage tools cannot operate. An optional bridge health check can report liveness, but it is not a substitute for the Discord REST integration.
 
 ### Host-specific deployments
 
@@ -164,7 +164,7 @@ Token creation ≠ automatic access. The bot can only act where **(1)** the invi
 
 **Messaging-only permission integer** (View + Send + History + Attach + Embed): **`117760`**.
 
-### Moderation (manage MCP 0.3.23+)
+### Moderation (manage MCP 0.3.24+)
 
 | Permission | Bit | Needed for |
 |------------|-----|------------|
@@ -336,25 +336,11 @@ When local install works (clone → bootstrap → configure variables → MCP `i
 2. Submit the public GitHub URL at [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish).
 3. Do **not** submit until a fresh-clone README walk passes without undocumented steps.
 
-## Marketplace PR — xAI / Grok (later — not in this change)
+## Grok Marketplace PR
 
-To list in `xai-org/plugin-marketplace`, open a PR that appends a **remote** entry to `.grok-plugin/marketplace.json` pinned to a full commit SHA of this repo, then regenerate `plugin-index.json` with the marketplace scripts. Suggested sketch:
+The official Grok catalog submission is [xai-org/plugin-marketplace#1088](https://github.com/xai-org/plugin-marketplace/pull/1088). It adds this repository as a **remote** entry, pinned to a full commit SHA, and was validated with the marketplace catalog checks. The entry remains under the public `matthew-rutledge-dev` repository; **CDCCENTRAL is the publisher brand, not a different repository owner**.
 
-```json
-{
-  "name": "grokbot-discord-fleet",
-  "description": "Discord fleet manage/status MCP + skills (REST reads + optional self-hosted bridge /healthz). Installer brings own bot token. Not the wake bridge.",
-  "category": "development",
-  "source": {
-    "source": "url",
-    "url": "https://github.com/matthew-rutledge-dev/grokbot-discord-fleet.git",
-    "sha": "<full-40-char-sha-after-this-commit>"
-  },
-  "homepage": "https://github.com/matthew-rutledge-dev/grokbot-discord-fleet",
-  "keywords": ["discord", "grok-bot", "fleet", "mcp"],
-  "domains": ["discord.com", "discordapp.com"]
-}
-```
+After xAI merges the PR, use the [Grok Build marketplace install](#grok-build-marketplace-install) commands above. The Cursor submission at [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish) is a separate, optional catalog path; it does not publish the plugin to Grok.
 
 ## Secrets
 

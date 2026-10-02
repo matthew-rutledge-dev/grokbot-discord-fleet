@@ -4,7 +4,7 @@
  */
 const API = "https://discord.com/api/v10";
 const UA =
-  "DiscordBot (https://github.com/matthew-rutledge-dev/grokbot-discord-fleet, 0.3.23)";
+  "DiscordBot (https://github.com/matthew-rutledge-dev/grokbot-discord-fleet, 0.3.24)";
 
 export class DiscordApiError extends Error {
   constructor(
