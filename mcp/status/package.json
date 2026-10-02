@@ -1,6 +1,6 @@
 {
   "name": "discord-fleet-status-mcp",
-  "version": "0.2.0",
+  "version": "0.3.17",
   "private": true,
   "type": "module",
   "description": "MCP server: Discord fleet status via bridge /healthz + Discord REST reads",
@@ -9,11 +9,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.1"
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "tsx": "^4.19.3"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
-    "tsx": "^4.19.3",
     "typescript": "^5.8.2"
   }
 }

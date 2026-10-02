@@ -106,6 +106,8 @@ Wake dual-deliver needs agents to `POST /callback` themselves. After health veri
 
 ## Related
 
+- **Plugin MCP deps (if you also cloned this plugin):** run `./scripts/bootstrap-mcp.sh` in the plugin root before status/manage MCP will load — separate from bridge `npm ci`.
+
 - Boundary: skill `discord-fleet-boundary`
 - After setup: skill `discord-fleet-status` + status MCP `fleet_health`
 - **Required for self-callback:** skill `discord-fleet-callback-setup`

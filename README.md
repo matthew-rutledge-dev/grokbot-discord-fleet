@@ -25,7 +25,9 @@ Do not merge this plugin into a shared general catalog without an explicit maint
 | `.grok-plugin/plugin.json` | **Primary** Grok Build / marketplace manifest (includes `variables`) |
 | `.mcp.json` | MCP servers for Grok (catalog default name); env maps `${DISCORD_*}` |
 | `skills/` | Skill folders with `SKILL.md` |
-| `mcp/status`, `mcp/manage` | Local stdio MCP TypeScript sources |
+| `mcp/status`, `mcp/manage` | Local stdio MCP TypeScript sources (`npm start` after bootstrap) |
+| `scripts/bootstrap-mcp.sh` | **Required** post-clone `npm ci` for both MCP packages |
+| `assets/logo.svg` | Marketplace logo (referenced from manifests) |
 | `.cursor-plugin/plugin.json` + `mcp.json` | Optional Cursor dual-support |
 
 Marketplace index tooling (`xai-org/plugin-marketplace`) discovers `.grok-plugin/plugin.json` and defaults MCP scan to `.mcp.json`.
@@ -41,7 +43,7 @@ grok plugin marketplace list
 grok plugin install grokbot-discord-fleet --trust
 ```
 
-Then set **plugin variables** (below) to **your** Discord bot token — not anyone else's. Marketplace remote entries must pin a full 40-character commit SHA.
+Then run **Post-clone MCP deps** (`./scripts/bootstrap-mcp.sh` from the installed plugin root) unless the host documents that it already ran `npm ci` for plugin MCP packages. Set **plugin variables** (below) to **your** Discord bot token — not anyone else's. Marketplace remote entries must pin a full 40-character commit SHA.
 
 ### From this repo now (before marketplace PR)
 
@@ -51,10 +53,12 @@ Grok loads plugins from `./.grok/plugins/`, `~/.grok/plugins/`, config `[plugins
 # Clone / copy into user plugins
 mkdir -p ~/.grok/plugins
 git clone https://github.com/matthew-rutledge-dev/grokbot-discord-fleet.git ~/.grok/plugins/grokbot-discord-fleet
+# Required: install MCP package dependencies (first-time + after pull when lockfiles change)
+~/.grok/plugins/grokbot-discord-fleet/scripts/bootstrap-mcp.sh
 # or: grok --plugin-dir /path/to/grokbot-discord-fleet …
 ```
 
-If your Grok Build build supports installing a local/git path via `grok plugin install`, prefer that over hand-copy; otherwise use the directory layout above. Configure plugin variables / env (below) before starting Grok.
+If your Grok Build build supports installing a local/git path via `grok plugin install`, prefer that over hand-copy; otherwise use the directory layout above. Configure plugin variables / env (below) before starting Grok. Always run **Post-clone MCP deps** after clone/copy.
 
 ### Cursor (optional dual-support)
 
@@ -62,9 +66,24 @@ If your Grok Build build supports installing a local/git path via `grok plugin i
 mkdir -p ~/.cursor/plugins/local
 cp -a /path/to/grokbot-discord-fleet ~/.cursor/plugins/local/grokbot-discord-fleet
 # or: ln -s /path/to/grokbot-discord-fleet ~/.cursor/plugins/local/grokbot-discord-fleet
+# Required: install MCP package dependencies
+~/.cursor/plugins/local/grokbot-discord-fleet/scripts/bootstrap-mcp.sh
 ```
 
-Cursor uses `.cursor-plugin/plugin.json` and `mcp.json` (`${CURSOR_PLUGIN_ROOT}`). Set variables under Plugins → Configure (or equivalent).
+Cursor uses `.cursor-plugin/plugin.json` and `mcp.json` (`${CURSOR_PLUGIN_ROOT}`). Set variables under Plugins → Configure (or equivalent). MCP servers start with `npm start` in `mcp/status` and `mcp/manage` — they fail until bootstrap has run.
+
+### Post-clone MCP deps (required)
+
+Both MCP servers are TypeScript and need local `node_modules` (including `@modelcontextprotocol/sdk` and `tsx`). **README-only install without this step leaves MCP unloadable.**
+
+```bash
+# From the plugin root (clone or local install path):
+./scripts/bootstrap-mcp.sh
+# equivalent:
+#   (cd mcp/status && npm ci) && (cd mcp/manage && npm ci)
+```
+
+Re-run after pulling commits that change `mcp/*/package-lock.json`. No postinstall hooks ship in this repo — bootstrap is an explicit operator step (never silent RCE).
 
 ## Plugin variables (marketplace-friendly)
 
@@ -202,6 +221,7 @@ GROK_BOT_SENDPROMPT_URL=https://sendprompt.example.com
 ```
 
 Keep the bridge loopback-only behind the tunnel, rotate `CALLBACK_TOKEN`, and keep secrets in the host vault/runtime environment. The tunnel and wake gateway are optional and are not provided by this plugin. For `/healthz`, keep using the existing loopback binding and SSH tunnel workflow rather than exposing the bridge port.
+
 ## Skills
 
 - `discord-fleet-boundary` — always on for fleet work; manage/status vs wake path; **per-installer credentials, not shared provider**; points at callback token/URL + callback-setup for wake replies
@@ -211,7 +231,15 @@ Keep the bridge loopback-only behind the tunnel, rotate `CALLBACK_TOKEN`, and ke
 - `discord-fleet-callback-setup` — **first-class** operator-driven setup for durable `DISCORD_BRIDGE_CALLBACK_TOKEN` + `DISCORD_BRIDGE_CALLBACK_URL` (secure secret card; verify present/missing only; safe curl smoke; per-bot Secrets for multi-agent fleets). Not silent postinstall.
 - `discord-fleet-hop-shorthand` — inbound wake is exactly `d:<slug>:<msgId>` (guild slug from channel-map; DMs default slug `dm`, `g` may be `null`), thin JSON `{id,g,u,map}` with optional `a:` CDN attachment refs, then human content; after decode/absorb, Grok chat shows **human content only** (strip `d:` + JSON); Discord OUT is human text and/or allowed `/callback` attachments — never hop codes; same `/callback` with DM `channelId`; dual-deliver prefers `process.env.DISCORD_BRIDGE_CALLBACK_*` (no host-vault hop required; never ask another agent to deliver)
 
-## Marketplace PR (later — not in this change)
+## Submit to Cursor Marketplace (optional)
+
+When local install works (clone → bootstrap → configure variables → MCP `initialize` / `tools/list`):
+
+1. Confirm the [Cursor Plugins submission checklist](https://cursor.com/docs/reference/plugins) (valid `.cursor-plugin/plugin.json`, relative logo `assets/logo.svg`, variables cover every `${…}` in `mcp.json`, public MIT repo, no secrets).
+2. Submit the public GitHub URL at [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish).
+3. Do **not** submit until a fresh-clone README walk passes without undocumented steps.
+
+## Marketplace PR — xAI / Grok (later — not in this change)
 
 To list in `xai-org/plugin-marketplace`, open a PR that appends a **remote** entry to `.grok-plugin/marketplace.json` pinned to a full commit SHA of this repo, then regenerate `plugin-index.json` with the marketplace scripts. Suggested sketch:
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.17
+
+- **First-time install fix:** document and ship `scripts/bootstrap-mcp.sh` (`npm ci` in `mcp/status` + `mcp/manage`). README Cursor/Grok install paths require this before MCP start.
+- MCP configs (`.mcp.json` / `mcp.json`) start via `npm start` in each package cwd (local `tsx` + SDK) instead of `npx -y tsx`.
+- Move `tsx` to MCP `dependencies` so runtime start does not rely on omit-dev installs.
+- Add `assets/logo.svg` and `logo` on `.cursor-plugin` / root / `.grok-plugin` manifests.
+- README: blank line before Skills; Cursor Marketplace submit blurb (`cursor.com/marketplace/publish` + checklist).
+- Align MCP `serverInfo` / Discord User-Agent with plugin semver `0.3.17`.
+- Skills: note required MCP bootstrap after clone.
+
 ## 0.3.16
 
 - Scrub remaining personal/portfolio framing for public general use: drop Betty-catalog and rumble/Plug operator shorthand from docs and skills; keep installer-neutral wording.

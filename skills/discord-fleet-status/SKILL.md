@@ -12,10 +12,11 @@ Health/status checks for the Discord fleet wired by this plugin's variables. Rea
 ## How
 
 1. Confirm boundary (see `discord-fleet-boundary`) — this is status, not wake. Credentials come from plugin variables (their token), not a shared provider.
-2. Call MCP server `discord-fleet-status`:
+2. If MCP servers fail to start with missing `@modelcontextprotocol/sdk` / `tsx`, the install skipped deps — run `./scripts/bootstrap-mcp.sh` from the plugin root, then retry.
+3. Call MCP server `discord-fleet-status`:
    - `fleet_health` — bridge `GET /healthz` when `DISCORD_BRIDGE_HEALTH_URL` is set; Discord `/users/@me` + guilds when `DISCORD_BOT_TOKEN` is set. Report which sources were available.
    - `list_channel_map` — schema from bridge docs + Discord channels for `guildId` / `DISCORD_GUILD_ID` when token present. Live enabled rows still live on the bridge host the operator runs.
-3. Treat tool output as evidence. If token or bridge URL is missing, say so — do not invent live Discord data. Point them at Plugins → Configure / plugin variables if unset.
+4. Treat tool output as evidence. If token or bridge URL is missing, say so — do not invent live Discord data. Point them at Plugins → Configure / plugin variables if unset.
 
 ## Evidence expected
 

@@ -1,11 +1,9 @@
 {
   "mcpServers": {
     "discord-fleet-status": {
-      "command": "npx",
+      "command": "npm",
       "args": [
-        "-y",
-        "tsx",
-        "${GROK_PLUGIN_ROOT}/mcp/status/src/index.ts"
+        "start"
       ],
       "cwd": "${GROK_PLUGIN_ROOT}/mcp/status",
       "env": {
@@ -17,11 +15,9 @@
       }
     },
     "discord-fleet-manage": {
-      "command": "npx",
+      "command": "npm",
       "args": [
-        "-y",
-        "tsx",
-        "${GROK_PLUGIN_ROOT}/mcp/manage/src/index.ts"
+        "start"
       ],
       "cwd": "${GROK_PLUGIN_ROOT}/mcp/manage",
       "env": {

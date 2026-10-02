@@ -1,19 +1,19 @@
 {
   "name": "discord-fleet-manage-mcp",
-  "version": "0.2.0",
+  "version": "0.3.17",
   "private": true,
   "type": "module",
-  "description": "MCP server: Discord fleet manage — dry-run plans + gated read helpers",
+  "description": "MCP server: Discord fleet manage \u2014 dry-run plans + gated read helpers",
   "scripts": {
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.1"
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "tsx": "^4.19.3"
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
-    "tsx": "^4.19.3",
     "typescript": "^5.8.2"
   }
 }

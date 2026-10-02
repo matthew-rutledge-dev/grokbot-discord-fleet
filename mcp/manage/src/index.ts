@@ -26,7 +26,7 @@ const WAKE_HOST_HINT =
   "Use your own host and deploy path for optional bridge setup; do not deploy from this plugin";
 
 const server = new Server(
-  { name: "discord-fleet-manage", version: "0.2.0" },
+  { name: "discord-fleet-manage", version: "0.3.17" },
   { capabilities: { tools: {} } },
 );
 
@@ -133,7 +133,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (name === "describe_manage_boundary") {
       return jsonResult({
         pluginRole: "manage + status only",
-        version: "0.2.0",
+        version: "0.3.17",
         wakesBots: false,
         sendPrompt: false,
         gatewayListen: false,
