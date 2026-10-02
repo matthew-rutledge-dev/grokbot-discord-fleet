@@ -11,6 +11,10 @@ Only when the user **explicitly** asks to set up, deploy, or verify the Discord 
 
 **Optional self-host:** Marketplace installers who want wake run the bridge on **their own** machine / guild with **their own** bot token. They use their own Discord and infrastructure. Skip this skill entirely if they only need Discord REST status/manage via plugin variables.
 
+## Discord bot first
+
+Need a bot token / guild invite / intents? Use the plugin README **Discord bot token & invite** checklist (Developer Portal → `DISCORD_BOT_TOKEN` → Message Content for wake → OAuth2 invite). This skill assumes you already have **your** bot token and (for wake) Portal intents enabled.
+
 ## Hard rules (anti-jobs)
 
 - Do **not** merge wake into marketplace postinstall or any install hook.
@@ -62,7 +66,7 @@ This plugin does **not** own wake. If you self-host the bridge and want DMs:
 | `ignoreBots` | Bot authors are ignored |
 | `security.dm.defaultAgentId` | **Required** for DMs — missing → deny `dm_no_agent`. Guild `channel-map.json` rows do **not** apply to DMs |
 
-**Outbound replies:** agents use the same bridge `POST /callback` as guild traffic (Bearer / `x-callback-token` unchanged). Text-only bodies remain valid.
+**Outbound replies:** agents use the same bridge `POST /callback` as guild traffic. Prefer **Bearer** or **`x-callback-token`** headers (query `?token=` is being removed on the bridge next release). Text-only bodies remain valid.
 
 ```json
 {

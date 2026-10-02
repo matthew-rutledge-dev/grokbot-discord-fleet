@@ -119,17 +119,34 @@ Declared in `.grok-plugin/plugin.json`, root `plugin.json`, and `.cursor-plugin/
 
 ### Marketplace installers
 
-1. Create **your own** Discord application + bot; invite it to **your** guild.
-2. Set plugin variable `DISCORD_BOT_TOKEN` to that token (Plugins → Configure / host env injection — **prefer vault → runtime env** over plaintext `.env` on disk when avoidable).
-3. Optionally set `DISCORD_GUILD_ID`.
-4. Optionally self-host the wake bridge on **your** machine and set `DISCORD_BRIDGE_HEALTH_URL` (see skill `discord-fleet-bridge-setup`). Skip if you only need Discord REST status/manage.
-5. For wake **self-callback / dual-deliver** without a host vault hop, file `DISCORD_BRIDGE_CALLBACK_TOKEN` + `DISCORD_BRIDGE_CALLBACK_URL` via skill `discord-fleet-callback-setup` (per-bot Secrets for multi-agent fleets).
+Follow **[Discord bot token & invite](#discord-bot-token--invite)** below for the full bot-create / invite / intent checklist, then:
+
+1. Set plugin variable `DISCORD_BOT_TOKEN` (Plugins → Configure / host env injection — **prefer vault → runtime env** over plaintext `.env` on disk when avoidable).
+2. Optionally set `DISCORD_GUILD_ID` and/or `DISCORD_BRIDGE_HEALTH_URL` (self-hosted bridge `/healthz` — skill `discord-fleet-bridge-setup`).
+3. For wake **self-callback / dual-deliver**, file `DISCORD_BRIDGE_CALLBACK_TOKEN` + `DISCORD_BRIDGE_CALLBACK_URL` via skill `discord-fleet-callback-setup` (per-bot Secrets for multi-agent fleets).
 
 You are **not** connecting to another installer's Discord, vault, or provider. Missing token → Discord REST tools report graceful "not configured" messages.
 
 ### Host-specific deployments
 
 Self-hosted bridge deployments use the host vault or plugin variables configured by that installation. Keep credentials and deploy paths on **your** machine; this marketplace plugin does not provide a shared wake host.
+
+
+## Discord bot token & invite
+
+Each marketplace installer creates **their own** Discord application and bot. This plugin never ships a shared token. **Never commit** tokens; **never paste** them in chat — use Bot Secrets / plugin variables / vault → runtime env.
+
+### Checklist
+
+1. **Create the app + bot** — Open the [Discord Developer Portal](https://discord.com/developers/applications) → **New Application** → open the **Bot** tab → **Add Bot** (or use an existing bot on that app).
+2. **Copy the bot token** — Bot tab → **Reset Token** / **Copy**. Set it as plugin variable / Bot Secret / env **`DISCORD_BOT_TOKEN`**. Prefer vault → runtime env. Never commit; never paste in chat.
+3. **Privileged Gateway Intents** (Portal → Bot → Privileged Gateway Intents) — match what you will run:
+   - **This plugin alone** (Discord REST status/manage MCP) — **no** privileged gateway intents required (HTTP REST with the bot token only; this plugin does not open a Discord Gateway).
+   - **Optional self-hosted wake bridge** (`matthew-rutledge-dev/grok-bot-discord-bridge`) — enable intents the bridge uses: **Message Content Intent** (privileged; required to read guild/DM message bodies for wake), plus non-privileged **Guilds**, **Guild Messages**, and **Direct Messages** when you want DM wake (see bridge README / skill `discord-fleet-bridge-setup`).
+4. **Invite the bot to your guild** — Portal → OAuth2 → **URL Generator**: scope **`bot`**; pick permissions your use case needs (typical fleet reply path: **View Channels**, **Send Messages**, **Read Message History**, **Attach Files**; add **Embed Links** if you want embeds). Open the generated URL while logged into Discord, select **your** guild, authorize.
+5. **Optional plugin vars** — `DISCORD_GUILD_ID` (default guild snowflake for status/manage tools); `DISCORD_BRIDGE_HEALTH_URL` (full URL to **your** bridge `GET /healthz`, e.g. `http://127.0.0.1:18083/healthz`) when you self-host a bridge.
+6. **Optional dual-deliver / self-callback** (separate self-hosted bridge) — file **`DISCORD_BRIDGE_CALLBACK_TOKEN`** + **`DISCORD_BRIDGE_CALLBACK_URL`** via secret cards (skill `discord-fleet-callback-setup`). Prefer **`Authorization: Bearer`** or **`x-callback-token`** headers on `POST /callback`. Query `?token=` is being removed on the bridge next release — use headers.
+7. **Skills** — bot/bridge bring-up: `discord-fleet-bridge-setup`; callback secrets: `discord-fleet-callback-setup`; wake hop / dual-deliver: `discord-fleet-hop-shorthand` (prefer `process.env.DISCORD_BRIDGE_CALLBACK_*` on each woken bot).
 
 ## Network endpoints (declare for operators / marketplace)
 
@@ -177,7 +194,7 @@ Typical self-host listens loopback-only (`127.0.0.1:18083`). Point `DISCORD_BRID
 
 ### Outbound media (`POST /callback`)
 
-Auth is unchanged (Bearer or `x-callback-token`). Text-only bodies remain backward compatible. This plugin never calls `/callback`; document for installers' own bridge.
+Prefer **Bearer** or **`x-callback-token`** headers (query `?token=` is being removed on the bridge next release). Text-only bodies remain backward compatible. This plugin never calls `/callback`; document for installers' own bridge.
 
 **JSON body**
 

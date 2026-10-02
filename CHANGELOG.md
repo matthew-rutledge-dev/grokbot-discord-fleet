@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.20
+
+- Docs: add README **Discord bot token & invite** checklist (Developer Portal → bot token → intents → OAuth2 invite → optional guild/health/callback).
+- Clarify privileged Gateway Intents: this plugin's REST MCP needs none; optional self-hosted wake bridge needs Message Content (+ Guilds / Guild Messages / Direct Messages for DM wake).
+- Prefer Bearer / `x-callback-token` headers for bridge `POST /callback`; note query `?token=` removal on bridge next release.
+- Skills `discord-fleet-callback-setup`, `discord-fleet-bridge-setup`, `discord-fleet-boundary`, `discord-fleet-hop-shorthand`: point at the checklist / header preference.
+- Bump manifests, MCP packages, serverInfo, and Discord User-Agent to `0.3.20`.
+
 ## 0.3.19
 
 - **Windows + Linux marketplace readiness:** add `scripts/bootstrap-mcp.ps1`; harden `scripts/bootstrap-mcp.sh` (no hard `pipefail` dependency; node/npm presence checks; Git Bash friendly).

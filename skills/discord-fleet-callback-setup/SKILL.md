@@ -13,6 +13,10 @@ description: use when installer wants wake dual-deliver / self-callback without 
 
 This is a **first-class setup step**, not docs-only. It is **operator-driven** — never run as silent postinstall.
 
+## Bot create first
+
+If the Discord application / bot / invite are not set up yet, follow the plugin README section **Discord bot token & invite** (Developer Portal → token → intents → OAuth2 invite). This skill only files callback token + URL after a self-hosted bridge exists.
+
 ## Hard rules
 
 - Do **not** run this skill silently on marketplace install or as a postinstall hook.
@@ -29,7 +33,7 @@ Confirm they run a **self-hosted** wake bridge (`matthew-rutledge-dev/grok-bot-d
 
 ### b. Save callback token (secret)
 
-Ask them to save Bot Secret (or plugin variable) **`DISCORD_BRIDGE_CALLBACK_TOKEN`** via the **secure secret card** — never paste the value in chat. This is the same secret the bridge uses as `CALLBACK_TOKEN` (Bearer / `x-callback-token` on `POST /callback`).
+Ask them to save Bot Secret (or plugin variable) **`DISCORD_BRIDGE_CALLBACK_TOKEN`** via the **secure secret card** — never paste the value in chat. This is the same secret the bridge uses as `CALLBACK_TOKEN`. Prefer **`Authorization: Bearer`** or **`x-callback-token`** headers on `POST /callback` (query `?token=` is being removed on the bridge next release).
 
 ### c. Save callback URL
 
