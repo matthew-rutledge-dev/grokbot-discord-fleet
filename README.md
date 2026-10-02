@@ -6,7 +6,7 @@ Plugin home for **Discord fleet manage/status** MCP servers + skills. Aligned fo
 
 - Bridge (optional, your machine): [matthew-rutledge-dev/grok-bot-discord-bridge](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge)
 
-**Marketplace installers are not joining Matthew's Discord or infra.** You configure **your own** Discord bot token (and optional guild / self-hosted bridge URL) via plugin variables. Matthew's host vault (`DISCORD_FLEET_WAKE`) and servergen1 wake path are **operator-only** for Matthew's own fleet — not a shared provider.
+**Marketplace installers use their own Discord and infrastructure.** Configure **your own** Discord bot token (and optional guild / self-hosted bridge URL) via plugin variables. Host vaults and deploy paths are specific to each installation — never a shared provider.
 
 Do not merge this plugin into the general/Betty catalog. Do not put secrets in git. Do not deploy to someone else's wake path from this plugin.
 
@@ -83,11 +83,11 @@ Declared in `.grok-plugin/plugin.json`, root `plugin.json`, and `.cursor-plugin/
 3. Optionally set `DISCORD_GUILD_ID`.
 4. Optionally self-host the wake bridge on **your** machine and set `DISCORD_BRIDGE_HEALTH_URL` (see skill `discord-fleet-bridge-setup`). Skip if you only need Discord REST status/manage.
 
-You are **not** connecting to Matthew's Discord, vault, or provider. Missing token → Discord REST tools report graceful "not configured" messages.
+You are **not** connecting to another installer's Discord, vault, or provider. Missing token → Discord REST tools report graceful "not configured" messages.
 
-### Matthew operator-only (not for marketplace)
+### Host-specific deployments
 
-Matthew's own fleet may load the same env names from host vault key `DISCORD_FLEET_WAKE` and probe a loopback bridge on servergen1 (`/opt/sites/discord-fleet-wake`, Diablo owns). That path is **not** part of the marketplace product surface.
+Self-hosted bridge deployments use the host vault or plugin variables configured by that installation. Keep credentials and deploy paths on **your** machine; this marketplace plugin does not provide a shared wake host.
 
 ## Network endpoints (declare for operators / marketplace)
 
@@ -229,7 +229,7 @@ To list in `xai-org/plugin-marketplace`, open a PR that appends a **remote** ent
 
 ## Secrets
 
-No tokens in git. Marketplace users set **plugin variables** (or host env injection from their vault). Prefer vault → runtime env over leaving plaintext `.env` on disk when avoidable. Matthew operator vault key `DISCORD_FLEET_WAKE` is **not** used by marketplace installers.
+No tokens in git. Marketplace users set **plugin variables** (or host env injection from their vault). Prefer vault → runtime env over leaving plaintext `.env` on disk when avoidable. Secrets remain in the installer's host vault or plugin variables.
 
 ## License
 

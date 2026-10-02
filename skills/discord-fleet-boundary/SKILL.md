@@ -12,11 +12,11 @@ Any Discord fleet task: health, channel maps, bindings, wake questions, or "whic
 ## Hard boundary
 
 - **This plugin** = manage + status MCP (Discord REST reads + optional bridge `/healthz`) and skills only.
-- **Wake path** = separate, **optional**, and **self-hosted by the operator**: `matthew-rutledge-dev/grok-bot-discord-bridge` on **their** machine. Gateway → `sendPrompt` / webhook via that bridge — not this plugin. Marketplace installers are **not** joining Matthew's Discord or infra.
+- **Wake path** = separate, **optional**, and **self-hosted by the operator**: `matthew-rutledge-dev/grok-bot-discord-bridge` on **their** machine. Gateway → `sendPrompt` / webhook via that bridge — not this plugin. Marketplace installers use their own Discord and infrastructure.
 - **Credentials are per-installer.** Set plugin variables `DISCORD_BOT_TOKEN` (required for Discord REST), optional `DISCORD_GUILD_ID`, optional `DISCORD_BRIDGE_HEALTH_URL`. Prefer vault → runtime env over plaintext `.env` on disk when avoidable. Never put secrets in git or in this plugin tree.
-- **Not a shared provider.** Matthew's host vault key `DISCORD_FLEET_WAKE` and servergen1 path `/opt/sites/discord-fleet-wake` (Diablo owns) are **Matthew operator-only** — do not treat them as the marketplace default or point other users at them.
+- **Not a shared provider.** Each installation supplies its own host vault, plugin variables, credentials, and deploy path; these are never marketplace defaults.
 - Never merge this plugin into the general/Betty catalog.
-- Never deploy to `/opt/sites/discord-fleet-wake` from this plugin for marketplace users (Matthew-operator work only, and only on explicit ask via bridge-setup).
+- Never deploy to a host or path you do not own from this plugin; use the explicit bridge-setup flow for your own deployment.
 - **DMs:** optional bridge `security.dm.*` + same `/callback` with DM `channelId`. This plugin has **no** `send_dm` MCP. Guild channel-map does not route DMs; set `defaultAgentId` on the bridge or they deny `dm_no_agent`.
 - **Media:** optional bridge inbound thin-JSON `a:` (CDN URL refs — fetch promptly) and outbound `/callback` `attachments` or multipart files. This plugin does not own wake or call `/callback`; document for installers' own bridge only. Never put hop codes in Discord replies.
 

@@ -43,7 +43,7 @@ d:ai-gen-chat:1234567890123456789
 look at this
 ```
 
-Placeholders only in docs/examples (`ai-gen-chat`, `discord-bot-infra`, fake snowflakes). No real operator hostnames, tokens, or cdccentral URLs.
+Placeholders only in docs/examples (`ai-gen-chat`, `discord-bot-infra`, fake snowflakes). No real operator hostnames, tokens, or private URLs.
 
 ### Guild vs DM
 

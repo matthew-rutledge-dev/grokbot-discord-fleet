@@ -22,7 +22,7 @@ import {
 
 const BRIDGE_REPO = "matthew-rutledge-dev/grok-bot-discord-bridge";
 const WAKE_HOST_HINT =
-  "/opt/sites/discord-fleet-wake on servergen1 (Diablo owns — do not deploy from this plugin)";
+  "Use your own host and deploy path for optional bridge setup; do not deploy from this plugin";
 
 /** Documented channel-map schema (SoT lives on bridge host, not in this plugin). */
 const CHANNEL_MAP_SCHEMA = {
@@ -186,7 +186,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
       } else {
         discordError =
-          "DISCORD_BOT_TOKEN not set — Discord REST skipped. Vault hint: DISCORD_FLEET_WAKE (host).";
+          "DISCORD_BOT_TOKEN not set — Discord REST skipped. Configure plugin variables or your host vault/runtime environment.";
       }
 
       const ok =

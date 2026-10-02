@@ -20,7 +20,7 @@ export function requireBotToken(): string {
   const token = process.env.DISCORD_BOT_TOKEN?.trim();
   if (!token) {
     throw new Error(
-      "DISCORD_BOT_TOKEN is not set. Set it in the environment (host vault key DISCORD_FLEET_WAKE) or via Cursor plugin variables. Never commit tokens.",
+      "DISCORD_BOT_TOKEN is not set. Set it via plugin variables or your host vault/runtime environment. Never commit tokens.",
     );
   }
   return token;

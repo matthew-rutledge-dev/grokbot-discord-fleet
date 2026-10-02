@@ -23,7 +23,7 @@ import {
 
 const BRIDGE_REPO = "matthew-rutledge-dev/grok-bot-discord-bridge";
 const WAKE_HOST_HINT =
-  "/opt/sites/discord-fleet-wake on servergen1 (Diablo owns — do not deploy from this plugin)";
+  "Use your own host and deploy path for optional bridge setup; do not deploy from this plugin";
 
 const server = new Server(
   { name: "discord-fleet-manage", version: "0.2.0" },
@@ -138,7 +138,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         sendPrompt: false,
         gatewayListen: false,
         wakePath:
-          "Zion Gateway → sendPrompt/webhook via matthew-rutledge-dev/grok-bot-discord-bridge",
+          "Your gateway → sendPrompt/webhook via matthew-rutledge-dev/grok-bot-discord-bridge",
         wakeHostHint: WAKE_HOST_HINT,
         bridgeHttp: {
           healthz: "GET /healthz (liveness + discordReady)",
@@ -151,7 +151,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           writes: "not implemented — enable map rows on bridge host only",
         },
         secrets:
-          "DISCORD_BOT_TOKEN from env / plugin variables; host vault DISCORD_FLEET_WAKE. Never commit tokens.",
+          "DISCORD_BOT_TOKEN from env / plugin variables; use your host vault for secrets. Never commit tokens.",
         note: "Do not invent wake calls from this plugin.",
       });
     }

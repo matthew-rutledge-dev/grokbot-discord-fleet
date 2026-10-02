@@ -1,12 +1,15 @@
 # Changelog
 
+## 0.3.14
+
+- Scrub operator host paths, vault key names, and unrelated GovInfo backlog from the marketplace surface.
+
 ## 0.3.13
 
 - Document bridge-host hop timing telemetry for bottleneck diagnosis: one `[timing] key=val …` line per stage, with `stage`, `msg`, `hop=d:<slug>:<id>`, `ms`, `ok`, `attachments`, `chunks`, and optional `idle_ms` (from `sendPrompt` acceptance to callback via `replyToMessageId`). Stages are `authz`, `build_wake`, `sendPrompt`, `callback_auth`, `callback_resolve`, `callback_deliver`, and `callback_total`.
-- Timing logs live on the host bridge (Diablo for Matthew's deployment), not the marketplace MCP. Agents may still report `callback <status> attachments=N` evidence; they must not invent timing values.
+- Timing logs live on the self-hosted bridge, not the marketplace MCP. Agents may still report `callback <status> attachments=N` evidence; they must not invent timing values.
 - Bump plugin manifests to `0.3.13`.
 
-<!-- Operator-only reference: timing helper deployed at bridge SHA `8ac3bfdf3c6ebf820f66a37d4bdd24e7ccc72c73` on live servergen1; caps/MIME are unchanged. -->
 
 ## 0.3.12
 
@@ -30,7 +33,6 @@
 - Skills: `discord-fleet-hop-shorthand`, `discord-fleet-bridge-setup`, `discord-fleet-boundary` — media notes with placeholders only
 - Bump plugin manifests to `0.3.10`
 
-<!-- Operator-only (not marketplace defaults): live bridge tip 48e6b699ef39273d23f4bf70b7a4299989b34f9e on grok-bot-discord-bridge / servergen1 documents the media contract; do not publish operator hostnames, agent UUIDs, or secrets as product defaults. -->
 
 ## 0.3.9
 
@@ -38,7 +40,6 @@
 - Skills: `discord-fleet-bridge-setup`, `discord-fleet-hop-shorthand`, `discord-fleet-boundary` — DM notes with placeholders only (installers use their own bot/guild/bridge agent ids)
 - Bump plugin manifests to `0.3.9`
 
-<!-- Operator-only (not marketplace defaults): Matthew's live wake on servergen1 maps DMs via security.dm.defaultAgentId to an orchestrator; do not publish that agent id or guild snowflakes as product defaults. Bridge SoT tip referenced for docs: b2cf955. -->
 
 ## 0.3.8
 
@@ -70,18 +71,18 @@
 ## 0.3.3
 
 - Marketplace-friendly **plugin variables**: declare `variables` on `.grok-plugin/plugin.json` (and sync root / `.cursor-plugin`); `DISCORD_BOT_TOKEN` required; optional `DISCORD_GUILD_ID`, `DISCORD_BRIDGE_HEALTH_URL`
-- Docs: each installer uses **their own** Discord bot token / guild; Matthew vault `DISCORD_FLEET_WAKE` is operator-only — not a shared provider; users are not joining Matthew's Discord/infra
+- Docs: each installer uses **their own** Discord bot token / guild and host vault or plugin variables; users are not joining another installer's Discord or infrastructure
 - Skill `discord-fleet-bridge-setup`: prefer plugin vars / vault→runtime env; discourage plaintext `.env` when avoidable; optional self-host for **their** machine/guild
-- Skill `discord-fleet-boundary` (+ status): clarify per-installer credentials vs Matthew-operator path
+- Skill `discord-fleet-boundary` (+ status): clarify per-installer credentials and host-specific paths
 
 ## 0.3.2
 
-- Skill `discord-fleet-bridge-setup`: short Windows vs Linux operator notes (same env vars; SSH/WSL tunnel to servergen1 `127.0.0.1:18083/healthz`; wake path Linux-only; Windows local smoke only; no curl|bash; no secrets in git)
+- Skill `discord-fleet-bridge-setup`: short Windows vs Linux operator notes (same env vars; SSH/WSL tunnel to your host's `127.0.0.1:18083/healthz`; wake path Linux-only; Windows local smoke only; no curl|bash; no secrets in git)
 
 ## 0.3.1
 
 - Add skill `discord-fleet-bridge-setup`: operator-driven Discord wake bridge setup (explicit user ask only; not postinstall)
-- Document vault key `DISCORD_FLEET_WAKE`, loopback `GET /healthz` on `127.0.0.1:18083`, and plugin env `DISCORD_BRIDGE_HEALTH_URL`
+- Document host vault / plugin variables, loopback `GET /healthz` on `127.0.0.1:18083`, and plugin env `DISCORD_BRIDGE_HEALTH_URL`
 - README: mention new skill; anti-jobs (no curl|bash, no secrets in git, no silent wake merge)
 
 ## 0.3.0
@@ -107,4 +108,4 @@
 
 ## Unreleased
 
-- BACKLOG: GovInfo / api.data.gov MCP marketplace add-on candidate (vaulted key; no ad-hoc wire)
+- Keep follow-ups focused on Discord fleet manage/status and optional self-hosted bridge support.
