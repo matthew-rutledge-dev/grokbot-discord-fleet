@@ -1,6 +1,6 @@
 {
   "name": "discord-fleet-manage-mcp",
-  "version": "0.3.24",
+  "version": "0.3.25",
   "private": true,
   "type": "module",
   "description": "MCP server: Discord fleet manage \u2014 dry-run plans + confirm-gated Discord REST (history, post, perms, moderation)",

@@ -90,6 +90,10 @@ Internal hop fields stay in agent context for callback threading. They are not r
 
 The bridge may emit one `[timing] key=val …` line per hop stage for bottleneck diagnosis: `authz`, `build_wake`, `sendPrompt`, `callback_auth`, `callback_resolve`, `callback_deliver`, and `callback_total`. Fields include `stage`, `msg`, `hop=d:<slug>:<id>`, `ms`, `ok`, `attachments`, `chunks`, and optional `idle_ms` (from `sendPrompt` acceptance to callback via `replyToMessageId`). These lines belong to the bridge host, not the marketplace MCP; agents do not invent timings. Keep the normal callback evidence line, such as `callback <status> attachments=N`, when available.
 
+## Local handler output
+
+If the bridge hop starts a local handler instead of `sendPrompt`, that handler still has to post back. The hop must pass the real inbound Discord message id and the callback URL (`DISCORD_BRIDGE_CALLBACK_URL`, or the bridge `CALLBACK_BASE_URL` + `CALLBACK_PATH`). The handler POSTs the image or text to that URL with `Authorization: Bearer <token>` or `x-callback-token`. Do not put the callback token in the query string. Set `replyToMessageId` to the inbound message id. Without the real message id and callback URL, the handler can finish and never post.
+
 ## Dual delivery (hard rule)
 
 After decoding a short hop, the agent **MUST** reply through the bridge `CALLBACK` to Discord, using the triggering hop for reply/thread targeting. Body may be plain `content`, allowed `attachments` (JSON base64/url or multipart files), or both (`content` optional when ≥1 attachment). For DMs, `channelId` is the DM channel snowflake (wake metadata `discordChannelId`) — same callback contract as guild. The agent **MAY ALSO** reply in Grok chat, but a Grok-chat reply does not replace the Discord callback. If the callback cannot be completed, report the delivery failure rather than treating chat-only output as complete.

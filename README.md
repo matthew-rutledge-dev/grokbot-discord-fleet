@@ -256,6 +256,15 @@ Typical self-host listens loopback-only (`127.0.0.1:18083`). Point `DISCORD_BRID
 
 Auth is **header-only** (bridge **0.2.4+**): `Authorization: Bearer <token>` or **`x-callback-token`**. Query `?token=` alone / no auth / wrong Bearer → **401**. Text-only bodies remain valid. This plugin never calls `/callback`; document for installers' own bridge.
 
+### Local handler output
+
+When a bridge hop hands work to a local handler instead of `sendPrompt`, the hop must pass:
+
+- the real inbound Discord message id (the same id as `d:<slug>:<msgId>`), not a placeholder
+- the bridge callback URL (`CALLBACK_BASE_URL` + `CALLBACK_PATH`, or `DISCORD_BRIDGE_CALLBACK_URL`)
+
+The handler POSTs the result (text and/or an image) to that URL. Auth is header-only: `Authorization: Bearer <token>` or `x-callback-token`. Do not put the callback token in the query string. Set `replyToMessageId` to the inbound message id and `channelId` to the hop's channel. A handler that is not given those two values can exit successfully and never post.
+
 **JSON body**
 
 | Field | Notes |
