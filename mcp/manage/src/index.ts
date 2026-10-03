@@ -43,7 +43,7 @@ const TIMEOUT_MAX_SECONDS = 28 * 24 * 60 * 60; // Discord max ~28 days
 const DELETE_MESSAGE_SECONDS_MAX = 604800; // Discord ban delete_message_seconds max 7d
 
 const server = new Server(
-  { name: "discord-fleet-manage", version: "0.3.24" },
+  { name: "discord-fleet-manage", version: "0.3.25" },
   { capabilities: { tools: {} } },
 );
 
@@ -439,7 +439,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (name === "describe_manage_boundary") {
       return jsonResult({
         pluginRole: "manage + status only",
-        version: "0.3.24",
+        version: "0.3.25",
         wakesBots: false,
         sendPrompt: false,
         gatewayListen: false,

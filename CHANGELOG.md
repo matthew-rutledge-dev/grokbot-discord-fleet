@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.25
+
+- Docs: a bridge hop that starts a local handler must pass the real inbound Discord message id and the callback URL so the handler can POST the result (text and/or image) back. Header auth only (`Authorization: Bearer` or `x-callback-token`); do not put the callback token in the query string.
+- Bump manifests, MCP packages, serverInfo, and Discord User-Agent to `0.3.25`.
+
 ## 0.3.24
 
 - Align Grok-primary marketplace documentation with the open xAI catalog PR (#1088) and post-merge install commands.
