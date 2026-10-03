@@ -15,7 +15,7 @@ Health/status checks for the Discord fleet wired by this plugin's variables. Rea
 2. If MCP servers fail to start with missing `@modelcontextprotocol/sdk` / `tsx`, the install skipped deps — run `./scripts/bootstrap-mcp.sh` (Windows: `.\scripts\bootstrap-mcp.ps1`) from the plugin root, then retry.
 3. Call MCP server `discord-fleet-status`:
    - `fleet_health` — bridge `GET /healthz` when `DISCORD_BRIDGE_HEALTH_URL` is set; Discord `/users/@me` + guilds when `DISCORD_BOT_TOKEN` is set. Report which sources were available.
-   - `list_channel_map` — schema from bridge docs + Discord channels for `guildId` / `DISCORD_GUILD_ID` when token present. Live enabled rows still live on the bridge host the operator runs.
+   - `list_channel_map` — schema from bridge docs + Discord channels for `guildId` / `DISCORD_GUILD_ID` when token present. Schema includes global `botsEnabled` (missing means on) separate from per-site `channels[].enabled`. Live rows still live on the bridge host the operator runs.
 4. Treat tool output as evidence. If token or bridge URL is missing, say so — do not invent live Discord data. Point them at Plugins → Configure / plugin variables if unset.
 
 ## Evidence expected

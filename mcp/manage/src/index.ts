@@ -32,6 +32,17 @@ import {
   type DiscordRole,
   type DiscordUser,
 } from "./discord.js";
+import {
+  BOT_ENABLE_EVALUATION_ORDER,
+  FLEET_ENABLE_KEYS,
+  FLEET_ENABLE_SCHEMA,
+  bridgeBotRunsForSite,
+  normalizeFleetEnableConfig,
+  resolveGlobalBotsEnabled,
+  resolveSiteEnabled,
+  setGlobalBotsEnabled,
+  setSiteEnabled,
+} from "./bot-enable.js";
 
 const BRIDGE_REPO = "matthew-rutledge-dev/grok-bot-discord-bridge";
 const WAKE_HOST_HINT =
@@ -43,7 +54,7 @@ const TIMEOUT_MAX_SECONDS = 28 * 24 * 60 * 60; // Discord max ~28 days
 const DELETE_MESSAGE_SECONDS_MAX = 604800; // Discord ban delete_message_seconds max 7d
 
 const server = new Server(
-  { name: "discord-fleet-manage", version: "0.3.25" },
+  { name: "discord-fleet-manage", version: "0.3.26" },
   { capabilities: { tools: {} } },
 );
 
@@ -420,6 +431,41 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
         additionalProperties: false,
       },
     },
+    {
+      name: "evaluate_bridge_bot_enable",
+      description:
+        "Pure evaluation of two independent bridge-bot enable stores. Global botsEnabled (default ON; missing means on) does not own per-site sites[].enabled. A bridge bot runs for a site only when global is on AND that site is on. No Discord call, no config write.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          botsEnabled: {
+            type: "boolean",
+            description:
+              "Global bridge-bot on/off. Omit to mean enabled (default on). Does not rewrite sites.",
+          },
+          sites: {
+            type: "array",
+            description:
+              "Per-site enable flags. Independent of botsEnabled. Missing site is off.",
+            items: {
+              type: "object",
+              properties: {
+                siteId: { type: "string", description: "Site id (channel snowflake or installer site key)" },
+                enabled: { type: "boolean", description: "Whether this site is on" },
+              },
+              required: ["siteId", "enabled"],
+              additionalProperties: false,
+            },
+          },
+          siteId: {
+            type: "string",
+            description: "Site to evaluate",
+          },
+        },
+        required: ["siteId"],
+        additionalProperties: false,
+      },
+    },
   ],
 }));
 
@@ -439,7 +485,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (name === "describe_manage_boundary") {
       return jsonResult({
         pluginRole: "manage + status only",
-        version: "0.3.25",
+        version: "0.3.26",
         wakesBots: false,
         sendPrompt: false,
         gatewayListen: false,
@@ -472,8 +518,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             "confirm-gated Manage Messages delete; dry-run without confirm=true",
           purge_channel_messages:
             "confirm-gated Manage Messages purge (bulk-delete when eligible, else noted limits); dry-run without confirm=true; cap 100",
+          evaluate_bridge_bot_enable:
+            "pure read of two independent stores (botsEnabled global, sites[].enabled per site); no Discord call; neither store writes the other",
           bridgeConfigWrites:
             "channel-map.json / security.json writes not implemented — enable map rows on bridge host only",
+        },
+        botEnable: {
+          layers: 2,
+          globalKey: FLEET_ENABLE_KEYS.global,
+          siteKey: "sites[].enabled (channel-map channels[].enabled is the same per-site store)",
+          defaultGlobal: "on",
+          missingGlobalMeans: "on",
+          runsWhen: "global on AND that site on",
+          evaluationOrder: BOT_ENABLE_EVALUATION_ORDER,
+          storesIndependent: true,
         },
         requiredDiscordPermissions:
           "See README § Discord bot permissions — View/Send/History (+ Attach/Embed); moderation: Moderate Members, Kick, Ban, Manage Messages; role hierarchy required",
@@ -502,6 +560,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         requireMention,
       };
 
+      const fleetEnable = normalizeFleetEnableConfig({
+        sites: channelId ? [{ siteId: channelId, enabled: false }] : [],
+      });
       return jsonResult({
         dryRun: true,
         sideEffects: false,
@@ -509,13 +570,20 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         agentAlias,
         channelId,
         draftChannelMapRow: draftRow,
+        fleetEnable: {
+          botsEnabled: resolveGlobalBotsEnabled(fleetEnable),
+          sites: fleetEnable.sites,
+          runs: channelId ? bridgeBotRunsForSite(fleetEnable, channelId) : false,
+          note: "Dry-run only. botsEnabled is the global store (omitted here, so ON). draft row enabled / sites[].enabled is the per-site store (OFF until go-live). This plan does not write either store.",
+        },
         steps: [
           "Confirm guild is allowlisted in bridge config/security.json",
           "Confirm channel exists (use resolve_channel with confirm=true if needed)",
           "Optionally check_bot_channel_permissions (confirm=true) for View/Send/History (+ mod flags)",
           "Pick a real Grok Bot agentId (empty agentId stays deny)",
-          "On bridge host only: add/edit config/channel-map.json row; leave enabled=false until ready",
-          "Set enabled=true only after DISCORD_BOT_TOKEN is live and Compose is intentionally started",
+          "On bridge host only: add/edit config/channel-map.json row; leave the per-site enabled=false until ready",
+          "Do not treat the row enabled flag as the global botsEnabled toggle — the two stores are independent (global defaults on when omitted)",
+          "Set the per-site enabled=true only after DISCORD_BOT_TOKEN is live and Compose is intentionally started",
           "Verify with bridge GET /healthz → discordReady: true (not this plugin)",
         ],
         bridgeRepo: BRIDGE_REPO,
@@ -1320,6 +1388,55 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         errors,
         limitations: plan.limitations,
         note: "Purge via Discord REST (bulk when eligible). Not wake/sendPrompt.",
+      });
+    }
+
+    if (name === "evaluate_bridge_bot_enable") {
+      const siteId = asTrimmedString(args.siteId);
+      if (!siteId) {
+        return jsonResult(
+          { ok: false, error: "siteId is required. No Discord call made." },
+          true,
+        );
+      }
+      const rawSites = Array.isArray(args.sites) ? args.sites : [];
+      const normalized = normalizeFleetEnableConfig({
+        ...(typeof args.botsEnabled === "boolean"
+          ? { botsEnabled: args.botsEnabled }
+          : {}),
+        sites: rawSites.filter(
+          (row): row is { siteId?: unknown; enabled?: unknown } =>
+            typeof row === "object" && row !== null,
+        ),
+      });
+      const globalOn = resolveGlobalBotsEnabled(normalized);
+      const siteOn = resolveSiteEnabled(normalized.sites, siteId);
+      const flippedGlobal = setGlobalBotsEnabled(normalized, !globalOn);
+      const flippedSite = setSiteEnabled(normalized, siteId, !siteOn);
+      return jsonResult({
+        ok: true,
+        dryRun: true,
+        sideEffects: false,
+        discordApiCalls: false,
+        discordWrites: false,
+        schema: FLEET_ENABLE_SCHEMA,
+        keys: FLEET_ENABLE_KEYS,
+        evaluationOrder: BOT_ENABLE_EVALUATION_ORDER,
+        config: normalized,
+        siteId,
+        globalEnabled: globalOn,
+        siteEnabled: siteOn,
+        runs: bridgeBotRunsForSite(normalized, siteId),
+        missingGlobalMeans: "on",
+        storesIndependent: true,
+        proof: {
+          globalWriteLeavesSites:
+            JSON.stringify(normalized.sites) ===
+            JSON.stringify(flippedGlobal.sites),
+          siteWriteLeavesGlobal:
+            normalized.botsEnabled === flippedSite.botsEnabled,
+        },
+        note: "Evaluation only. Global botsEnabled and per-site enabled are separate stores. A bridge bot runs for this site only when both are on. This tool does not write config and does not start or stop bots.",
       });
     }
 

@@ -18,6 +18,7 @@ Any Discord fleet task: health, channel maps, bindings, wake questions, or "whic
 - **Not a shared provider.** Each installation supplies its own host vault, plugin variables, credentials, and deploy path; these are never marketplace defaults.
 - Never merge this plugin into a shared general catalog without an explicit maintainer decision.
 - Never deploy to a host or path you do not own from this plugin; use the explicit bridge-setup flow for your own deployment.
+- **Two enable layers, not one flag.** Global `botsEnabled` (default ON; a missing flag means on) is independent of per-site `sites[].enabled` / channel-map `channels[].enabled`. A bridge bot runs for a site only when global is on AND that site is on. Toggling a site does not change the global flag, and changing the global flag does not rewrite site flags. Evaluate with manage MCP `evaluate_bridge_bot_enable` (`bridgeBotRunsForSite`). This plugin does not start or stop bridge processes.
 - **DMs:** optional bridge `security.dm.*` + same `/callback` with DM `channelId`. This plugin has **no** `send_dm` MCP. Guild channel-map does not route DMs; set `defaultAgentId` on the bridge or they deny `dm_no_agent`.
 - **Media:** optional bridge inbound thin-JSON `a:` (CDN URL refs — fetch promptly) and outbound `/callback` `attachments` or multipart files. This plugin does not own wake or call `/callback`; document for installers' own bridge only. Never put hop codes in Discord replies.
 

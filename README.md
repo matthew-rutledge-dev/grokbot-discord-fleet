@@ -240,6 +240,31 @@ Do **not** assume `${CURSOR_PLUGIN_ROOT}` works under Grok, or `${GROK_PLUGIN_RO
 - `unban_member` — remove ban; dry-run without `confirm=true`
 - `delete_message` — delete one message; dry-run without `confirm=true`
 - `purge_channel_messages` — bulk-delete when Discord allows (≥2,<100, <14d) else single-delete / note limits; cap 100; dry-run without `confirm=true`
+- `evaluate_bridge_bot_enable` — pure check of global `botsEnabled` (default on) AND per-site `sites[].enabled`; neither store writes the other; no Discord call
+
+## Bridge bot enable (two independent layers)
+
+Bridge bots use two stores. Do not collapse them into one flag. This plugin evaluates the rule; it does not start or stop bridge processes and does not write the live channel map.
+
+| Store | Key | Default | What it controls |
+|-------|-----|---------|------------------|
+| Global | `botsEnabled` | **ON**. A missing flag means enabled. | Whether bridge bots run at all. When off, bots do not run even if a site is enabled. |
+| Per-site | `sites[].enabled` (same meaning as channel-map `channels[].enabled`) | Off unless that site is explicitly enabled | Whether that site is on. Changing it does not write `botsEnabled`. |
+
+Evaluation order (`bridgeBotRunsForSite` in `mcp/manage/src/bot-enable.ts`):
+
+1. Read `botsEnabled`. If the flag is missing or not a boolean, treat it as on.
+2. Read that site's `enabled` flag from the separate site store. A missing site is off.
+3. The bridge bot runs for the site only when global is on **and** that site is on.
+
+`setGlobalBotsEnabled` copies site rows unchanged. `setSiteEnabled` preserves `botsEnabled` exactly, including when it was omitted. Manage MCP `evaluate_bridge_bot_enable` returns that result (no Discord call). Example:
+
+```json
+{
+  "botsEnabled": true,
+  "sites": [{ "siteId": "<site-id>", "enabled": true }]
+}
+```
 
 ## Bridge HTTP (reference — optional self-host)
 

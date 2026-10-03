@@ -27,9 +27,15 @@ const WAKE_HOST_HINT =
 /** Documented channel-map schema (SoT lives on bridge host, not in this plugin). */
 const CHANNEL_MAP_SCHEMA = {
   version: 1,
+  /**
+   * Global bridge-bot on/off. Independent of channels[].enabled.
+   * Omit this field to mean ON (default). Does not rewrite per-site flags.
+   */
+  botsEnabled: true as boolean,
   defaultSendPromptUrl: null as string | null,
   channels: [
     {
+      /** Per-site on/off. Not owned by botsEnabled. */
       enabled: false,
       channelId: "<snowflake>",
       label: "optional",
@@ -40,8 +46,19 @@ const CHANNEL_MAP_SCHEMA = {
   ],
 };
 
+const BOT_ENABLE = {
+  layers: 2,
+  globalKey: "botsEnabled",
+  siteKey: "channels[].enabled",
+  defaultGlobal: "on",
+  missingGlobalMeans: "on",
+  runsWhen: "botsEnabled is on (default) AND that channel/site enabled is true",
+  storesIndependent: true,
+  evaluateWith: "discord-fleet-manage evaluate_bridge_bot_enable / bridgeBotRunsForSite",
+};
+
 const server = new Server(
-  { name: "discord-fleet-status", version: "0.3.25" },
+  { name: "discord-fleet-status", version: "0.3.26" },
   { capabilities: { tools: {} } },
 );
 
@@ -199,13 +216,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return jsonResult({
         ok,
         plugin: "discord-fleet-status",
-        version: "0.3.25",
+        version: "0.3.26",
         wakesBots: false,
         bridgeRepo: BRIDGE_REPO,
         wakeHostHint: WAKE_HOST_HINT,
         bridgeHealth: bridge,
         discord,
         discordError,
+        botEnable: BOT_ENABLE,
         envHints: {
           DISCORD_BOT_TOKEN: hasBotToken() ? "set" : "missing",
           DISCORD_BRIDGE_HEALTH_URL: healthUrl ? "set" : "missing",
@@ -223,9 +241,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         null;
 
       const body: Record<string, unknown> = {
-        note: "Live channel-map.json + security.json live on the bridge host, not in this plugin. Schema below matches bridge README.",
+        note: "Live channel-map.json + security.json live on the bridge host, not in this plugin. Schema below matches bridge README, plus the separate global botsEnabled flag (missing means on).",
         bridgeRepo: BRIDGE_REPO,
         channelMapSchema: CHANNEL_MAP_SCHEMA,
+        botEnable: BOT_ENABLE,
         securityModel:
           "deny-by-default: guild allowlist → users → roles → channels → enabled map row → mention",
         guildId,

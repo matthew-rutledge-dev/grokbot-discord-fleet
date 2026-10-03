@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.26
+
+- Two independent bridge-bot enable layers. Do not collapse them into one flag.
+  - Global `botsEnabled` (default ON). A missing flag means enabled. When off, bridge bots do not run even if a site is enabled.
+  - Per-site `sites[].enabled` (same meaning as channel-map `channels[].enabled`). Turning a site on or off does not change the global flag, and changing the global flag does not rewrite site rows.
+- Pure evaluation: `bridgeBotRunsForSite` — a bridge bot runs for a site only when global is on AND that site is on. `setGlobalBotsEnabled` / `setSiteEnabled` each copy the other store unchanged. Manage MCP `evaluate_bridge_bot_enable` (no Discord call, no writes).
+- Bump manifests, MCP packages, serverInfo, and Discord User-Agent to `0.3.26`.
+
+
 ## 0.3.25
 
 - Docs: a bridge hop that starts a local handler must pass the real inbound Discord message id and the callback URL so the handler can POST the result (text and/or image) back. Header auth only (`Authorization: Bearer` or `x-callback-token`); do not put the callback token in the query string.
