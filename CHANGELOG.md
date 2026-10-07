@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.27
+
+- Docs: Grok Build and the Grok Bot desktop app keep separate plugin copies. Every deploy installs the same commit in both.
+- Docs: channel-map example adds optional `primary_llm`, `wake_agent`, `handler`, `local_handler`, `harness`, and `profile`, with placeholder values only. Real agent ids stay in the operator's local roster, not this repo.
+- Bump manifests, MCP packages, serverInfo, and Discord User-Agent to `0.3.27`.
+
 ## 0.3.26
 
 - Two independent bridge-bot enable layers. Do not collapse them into one flag.
