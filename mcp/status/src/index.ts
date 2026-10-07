@@ -39,9 +39,17 @@ const CHANNEL_MAP_SCHEMA = {
       enabled: false,
       channelId: "<snowflake>",
       label: "optional",
-      agentId: "",
+      agentId: "<agent-uuid>",
       sendPromptUrl: null as string | null,
       requireMention: false,
+      /** Optional. "local" skips sendPrompt when wake_agent is false and a handler is set. */
+      primary_llm: "local",
+      wake_agent: false,
+      handler: "example-handler",
+      local_handler: "example-local-handler",
+      /** Optional runner. Example only. Real profile names stay in the operator roster, not this plugin. */
+      harness: "grok-build",
+      profile: "example-profile",
     },
   ],
 };

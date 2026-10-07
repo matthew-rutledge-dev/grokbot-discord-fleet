@@ -266,6 +266,33 @@ Evaluation order (`bridgeBotRunsForSite` in `mcp/manage/src/bot-enable.ts`):
 }
 ```
 
+## Install locations
+
+Grok Build loads this plugin from `~/.grok/plugins/grokbot-discord-fleet` on the operator's machine. The Grok Bot desktop app does not read that directory. It keeps its own plugin copy. Every Fleet deploy must install the same commit in both places. Updating only Grok Build leaves the Grok Bot app on the older copy.
+
+## Channel map example
+
+The live map stays on the bridge host. This plugin does not ship it. Fields below `requireMention` are optional. Values are placeholders.
+
+```json
+{
+  "enabled": false,
+  "channelId": "<snowflake>",
+  "label": "example",
+  "agentId": "<agent-uuid>",
+  "sendPromptUrl": null,
+  "requireMention": false,
+  "primary_llm": "local",
+  "wake_agent": false,
+  "handler": "example-handler",
+  "local_handler": "example-local-handler",
+  "harness": "grok-build",
+  "profile": "example-profile"
+}
+```
+
+Agent ids for a real roster belong in the operator's local roster file, not in this repo. To wake a bot by alias from a shell, operators use their own send script and that local file.
+
 ## Bridge HTTP (reference — optional self-host)
 
 From bridge README / `http-server.ts` (read-only reference repo):
