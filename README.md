@@ -77,6 +77,29 @@ cp -a /path/to/grokbot-discord-fleet ~/.cursor/plugins/local/grokbot-discord-fle
 
 Cursor uses `.cursor-plugin/plugin.json` and `mcp.json` (`${CURSOR_PLUGIN_ROOT}`). Set variables under Plugins → Configure (or equivalent). MCP servers start with **`node ./node_modules/tsx/dist/cli.mjs src/index.ts`** in each package cwd (portable on Windows and Linux — avoids fragile bare `npm` / `npm.cmd` stdio spawns). They fail until bootstrap has run.
 
+Cursor does not read `~/.grok/plugins`. Copy or symlink the same commit into `~/.cursor/plugins/local/grokbot-discord-fleet`, run bootstrap there, set the same plugin variables, and restart Cursor. A symlink is one tree. A copy has to be updated again after every pull.
+
+The Grok Bot desktop app also keeps its own plugin copy. It does not read `~/.grok/plugins` or the Cursor folder. Install this same commit in that app and restart the app. Updating only Grok Build leaves the other two hosts on the old files.
+
+### If the MCP handshake closes
+
+`discord-fleet-status` and `discord-fleet-manage` speak MCP on stdin. A "connection closed" during initialize means the process exited before it answered. Check these in order:
+
+1. `node` and `npm` are on `PATH`. Run the bootstrap script for the copy that host actually loads.
+2. Set `DISCORD_BOT_TOKEN` in that host's plugin variables, or in the environment of the process that starts the host. The value is read when the host process starts. A session that is already open does not see a token added later.
+3. Confirm the host expanded its plugin-root variable before spawn. Grok Build uses `${GROK_PLUGIN_ROOT}` in `.mcp.json`. Cursor uses `${CURSOR_PLUGIN_ROOT}` in `mcp.json`. If that variable is empty, `cwd` is not the `mcp/status` or `mcp/manage` directory and Node exits immediately.
+4. On that machine only, you may set `cwd` in the local MCP file to the absolute `mcp/status` and `mcp/manage` directories. Do not commit that change. The public files keep the placeholder.
+5. Restart the host. Skills can load while the MCP servers stay down. The next start is what attaches the servers.
+
+A manual check from the plugin root, with a throwaway token, should print one JSON line whose `serverInfo.name` is `discord-fleet-manage`:
+
+```bash
+printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"probe","version":"0"}}}' \
+  | DISCORD_BOT_TOKEN=probe node ./node_modules/tsx/dist/cli.mjs src/index.ts
+```
+
+Run that with the working directory `mcp/manage`. Do not use your real bot token in the command line.
+
 ### Post-clone MCP deps (required)
 
 Both MCP servers are TypeScript and need local `node_modules` (including `@modelcontextprotocol/sdk` and `tsx`). **README-only install without this step leaves MCP unloadable.**
