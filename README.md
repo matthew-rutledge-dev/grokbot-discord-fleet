@@ -426,6 +426,21 @@ The official Grok catalog submission is [xai-org/plugin-marketplace#1088](https:
 
 After xAI merges the PR, use the [Grok Build marketplace install](#grok-build-marketplace-install) commands above. The Cursor submission at [cursor.com/marketplace/publish](https://cursor.com/marketplace/publish) is a separate, optional catalog path; it does not publish the plugin to Grok.
 
+## sendPrompt tunnel watchdog (optional)
+
+`scripts/ensure-sendprompt-tunnel.sh` is an idempotent entry point (run it from cron/startup); it starts `scripts/sendprompt-tunnel-watchdog.sh` once. The watchdog probes `SENDPROMPT_TUNNEL_URL` every 60s, treats any non-3-digit status, `000`, or 5xx as a miss, kills the connector after 2 misses, restarts at once after a >3 min clock jump (resume from sleep), and does a daily forced restart at 06:00 local (date file; catches up on wake). Every non-404 probe and every restart is logged.
+
+| Env | Default |
+|---|---|
+| `SENDPROMPT_TUNNEL_URL` | required |
+| `SENDPROMPT_STATE_DIR` | `${XDG_STATE_HOME:-~/.local/state}/grokbot-sendprompt` (logs, locks, date file) |
+| `SENDPROMPT_CONNECTOR_PROC` / `SENDPROMPT_CONNECTOR_MATCH` | `cloudflared` / `grok-bot-sendprompt-tunnel` (cmdline substring) |
+| `SENDPROMPT_SUPERVISOR` | unset (command that keeps the connector running) |
+| `SENDPROMPT_ENSURE` | sibling `ensure-sendprompt-tunnel.sh` |
+| `SENDPROMPT_INTERVAL` / `_FAIL_LIMIT` / `_JUMP_SECS` / `_DAILY_HOUR` / `_HEALTHY_CODE` | `60` / `2` / `180` / `6` (empty disables) / `404` |
+
+Check with `scripts/sendprompt-tunnel-watchdog.sh --selftest`.
+
 ## Secrets
 
 No tokens in git. Marketplace users set **plugin variables** (or host env injection from their vault). Prefer vault → runtime env over leaving plaintext `.env` on disk when avoidable. Secrets remain in the installer's host vault or plugin variables.

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.28
+
+- New `scripts/sendprompt-tunnel-watchdog.sh` and `scripts/ensure-sendprompt-tunnel.sh` (generic, env-configured, no hosts baked in).
+- Fix: a curl timeout produced `000000` (`-w '%{http_code}' || echo 000`) and counted as healthy. Any non-3-digit status is now `000`; `000` and any 5xx are unhealthy.
+- Probe every 60s, restart after 2 misses in a row; restart immediately on a >3 min wall-clock jump (hibernate/resume); daily forced restart at 06:00 local tracked by a date file (runs on wake if asleep).
+- Lock fd no longer inherited by children; every non-404 probe and every restart is logged with its reason. `--selftest` checks the status classifier.
+- Bump manifests, MCP packages, serverInfo, and Discord User-Agent to `0.3.28`.
+
 ## 0.3.27
 
 - Docs: Grok Build and the Grok Bot desktop app keep separate plugin copies. Every deploy installs the same commit in both.
