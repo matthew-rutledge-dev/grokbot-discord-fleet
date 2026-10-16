@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.28
+
+- New `scripts/sendprompt-tunnel-watchdog.sh` and `scripts/ensure-sendprompt-tunnel.sh` (generic, env-configured, no hosts baked in).
+- Fix: a curl timeout produced `000000` (`-w '%{http_code}' || echo 000`) and counted as healthy. Any non-3-digit status is now `000`; `000` and any 5xx are unhealthy.
+- Probe every 60s, restart after 2 misses in a row; restart immediately on a >3 min wall-clock jump (hibernate/resume); daily forced restart at 06:00 local tracked by a date file (runs on wake if asleep).
+- Lock fd no longer inherited by children; every non-404 probe and every restart is logged with its reason. `--selftest` checks the status classifier.
+- Watchdog: daily-restart stamp is seeded on first start, so starting after 06:00 does not force an immediate restart.
+- Watchdog: `force_restart` no longer double-kills the connector / double-waits; ensure skips its kill when called from the watchdog (`SENDPROMPT_SKIP_KILL`).
+- 401 and 403 now count as unhealthy (usually a misconfigured URL/auth); selftest updated.
+- Docs: `SENDPROMPT_SUPERVISOR` is word-split (no spaces in its paths); generic bridge operator notes (User-Agent, DM `userId`, optional hop `c`, error table, connector restart / `--protocol http2`, deploy hygiene).
+- Bump manifests, MCP packages, serverInfo, and Discord User-Agent to `0.3.28`.
+
 ## 0.3.27
 
 - Docs: Grok Build and the Grok Bot desktop app keep separate plugin copies. Every deploy installs the same commit in both.
