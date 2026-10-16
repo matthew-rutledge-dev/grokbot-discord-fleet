@@ -403,6 +403,22 @@ GROK_BOT_SENDPROMPT_URL=https://sendprompt.example.com
 
 Keep the bridge loopback-only behind the tunnel, rotate `CALLBACK_TOKEN`, and keep secrets in the host vault/runtime environment. The tunnel and wake gateway are optional and are not provided by this plugin. For `/healthz`, keep using the existing loopback binding and SSH tunnel workflow rather than exposing the bridge port.
 
+## Bridge operator notes (generic)
+
+- **User-Agent:** callbacks must send a non-default User-Agent (e.g. `grok-bot-discord-bridge-client/1.0`). Default library UAs can be rejected at the edge with Cloudflare **1010** before reaching the bridge, so the bridge logs nothing.
+- **DM replies:** send `userId` and omit `channelId`. Sending neither returns `400 channelId_required`.
+- **Wake hop JSON:** `c` (channel ID) is optional and may be present for DMs too; decoders must accept the hop with or without it.
+
+| Symptom | Meaning |
+|---|---|
+| 1010 | Edge blocked the request (usually the User-Agent) |
+| 401 | Bad or missing Bearer; the hop did reach the origin |
+| 400 `channelId_required` | Neither `channelId` nor `userId` sent |
+| 502 / 1033 | sendPrompt tunnel is down |
+
+- **Tunnel connector:** it does not come back on its own after a host restart; run `scripts/ensure-sendprompt-tunnel.sh` from startup. On networks that block UDP, run the connector with `--protocol http2` (QUIC won't connect). The watchdog restarts the connector and checks the public URL.
+- **Deploy:** exclude the runtime `security.json`, `channel-map.json` and `.env` from the rsync; back them up first and compare checksums after. Configs are bind-mounted read-only and root-owned. Never run `docker compose config` where logs are shared: it expands secrets.
+
 ## Skills
 
 - `discord-fleet-boundary` — always on for fleet work; manage/status vs wake path; **per-installer credentials, not shared provider**; points at callback token/URL + callback-setup for wake replies
@@ -428,14 +444,14 @@ After xAI merges the PR, use the [Grok Build marketplace install](#grok-build-ma
 
 ## sendPrompt tunnel watchdog (optional)
 
-`scripts/ensure-sendprompt-tunnel.sh` is an idempotent entry point (run it from cron/startup); it starts `scripts/sendprompt-tunnel-watchdog.sh` once. The watchdog probes `SENDPROMPT_TUNNEL_URL` every 60s, treats any non-3-digit status, `000`, or 5xx as a miss, kills the connector after 2 misses, restarts at once after a >3 min clock jump (resume from sleep), and does a daily forced restart at 06:00 local (date file; catches up on wake). Every non-404 probe and every restart is logged.
+`scripts/ensure-sendprompt-tunnel.sh` is an idempotent entry point (run it from cron/startup); it starts `scripts/sendprompt-tunnel-watchdog.sh` once. The watchdog probes `SENDPROMPT_TUNNEL_URL` every 60s, treats any non-3-digit status, `000`, `401`/`403` (usually a misconfigured URL or auth), or 5xx as a miss, kills the connector after 2 misses, restarts at once after a >3 min clock jump (resume from sleep), and does a daily forced restart at 06:00 local (date file; catches up on wake; seeded on first start so a start after 06:00 doesn't restart immediately). Every non-404 probe and every restart is logged.
 
 | Env | Default |
 |---|---|
 | `SENDPROMPT_TUNNEL_URL` | required |
 | `SENDPROMPT_STATE_DIR` | `${XDG_STATE_HOME:-~/.local/state}/grokbot-sendprompt` (logs, locks, date file) |
 | `SENDPROMPT_CONNECTOR_PROC` / `SENDPROMPT_CONNECTOR_MATCH` | `cloudflared` / `grok-bot-sendprompt-tunnel` (cmdline substring) |
-| `SENDPROMPT_SUPERVISOR` | unset (command that keeps the connector running) |
+| `SENDPROMPT_SUPERVISOR` | unset (command that keeps the connector running; word-split, so paths can't contain spaces) |
 | `SENDPROMPT_ENSURE` | sibling `ensure-sendprompt-tunnel.sh` |
 | `SENDPROMPT_INTERVAL` / `_FAIL_LIMIT` / `_JUMP_SECS` / `_DAILY_HOUR` / `_HEALTHY_CODE` | `60` / `2` / `180` / `6` (empty disables) / `404` |
 

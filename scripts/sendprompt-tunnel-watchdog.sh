@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # sendPrompt tunnel watchdog (generic). Probes a public tunnel URL and restarts the local connector when the
 # edge goes stale. Single instance via flock. Never prints tokens.
-#   - any probe result that is not a 3-digit HTTP code becomes 000; 000 or any 5xx = unhealthy
+#   - any probe result that is not a 3-digit HTTP code becomes 000; 000, 401, 403 or any 5xx = unhealthy
+#     (401/403 usually means a misconfigured URL or auth in front of it)
 #   - probe every INTERVAL (60s); restart after FAIL_LIMIT (2) misses in a row
 #   - wall-clock jump > JUMP_SECS (180s) between loops (hibernate/resume) => immediate restart
-#   - daily forced restart at DAILY_HOUR (06) local, tracked by a date file (catches up on wake)
+#   - daily forced restart at DAILY_HOUR (06) local, tracked by a date file (catches up on wake);
+#     the stamp is seeded on first start so starting after 06:00 does not force an immediate restart
 #   - lock fd is not inherited by children; every non-HEALTHY_CODE probe and every restart is logged
 # Usage: sendprompt-tunnel-watchdog.sh [--selftest]
 # Env:
@@ -23,11 +25,11 @@ DAILY_HOUR=${SENDPROMPT_DAILY_HOUR-6}
 OKCODE=${SENDPROMPT_HEALTHY_CODE:-404}
 
 classify() { local c="$1"; [[ "$c" =~ ^[0-9]{3}$ ]] || c=000; echo "$c"; }
-healthy() { [[ "$1" != 000 ]] && (( 10#$1 < 500 )); }
+healthy() { [[ "$1" != 000 && "$1" != 401 && "$1" != 403 ]] && (( 10#$1 < 500 )); }  # 401/403 = misconfigured URL/auth
 
 if [[ "${1:-}" == --selftest ]]; then
   rc=0
-  for t in "404 healthy" "200 healthy" "301 healthy" "530 UNHEALTHY" "502 UNHEALTHY" "000 UNHEALTHY" \
+  for t in "404 healthy" "200 healthy" "301 healthy" "401 UNHEALTHY" "403 UNHEALTHY" "530 UNHEALTHY" "502 UNHEALTHY" "000 UNHEALTHY" \
            "000000 UNHEALTHY" "_ UNHEALTHY" "abc UNHEALTHY" "5300 UNHEALTHY"; do
     raw=${t% *}; want=${t#* }; [[ "$raw" == _ ]] && raw=""
     x=$(classify "$raw"); healthy "$x" && r=healthy || r=UNHEALTHY
@@ -51,13 +53,14 @@ probe() { classify "$(curl -s -o /dev/null -w '%{http_code}' -m 15 "$HOST" 9>&- 
 kill_conn() { local p; for p in $(pgrep -x "$PROC"); do tr '\0' ' ' < /proc/$p/cmdline 2>/dev/null | grep -qF -- "$MATCH" && kill "$p" 2>/dev/null; done; }
 force_restart() { # $1 = reason
   log "restart reason=$1: killing connector"; kill_conn; sleep 8 9>&-
-  [[ -x "$ENSURE" ]] && WATCHDOG_CHILD=1 "$ENSURE" 9>&- >/dev/null 2>&1
+  [[ -x "$ENSURE" ]] && WATCHDOG_CHILD=1 SENDPROMPT_SKIP_KILL=1 "$ENSURE" 9>&- >/dev/null 2>&1
   local i c=000; for i in $(seq 1 12); do c=$(probe); [[ "$c" == "$OKCODE" ]] && break; sleep 10 9>&-; done
   log "restart reason=$1 done public=$c attempts=$i"
 }
 
 log "watchdog started pid=$$ interval=${INTERVAL}s fail_limit=$FAIL_LIMIT"
 fails=0; last=$(date +%s)
+[[ -n "$DAILY_HOUR" && ! -s "$STAMP" ]] && (( 10#$(date +%H) >= 10#$DAILY_HOUR )) && { date +%F > "$STAMP"; log "seeded daily stamp $(date +%F)"; }
 while true; do
   now=$(date +%s); today=$(date +%F)
   if (( now - last > JUMP_SECS )); then log "clock jump $((now-last))s (hibernate/resume?)"; force_restart resume; fails=0; fi
