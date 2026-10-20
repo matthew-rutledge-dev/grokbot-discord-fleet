@@ -474,8 +474,8 @@ Set up the routine with the `discord-wake-on-sleep` skill: **one routine per Gro
 
 1. The bot creates (or reuses) the routine. The routine panel has three fields: **POST URL**, **key**, and an **Authorization header** field.
 2. The bot gives you deep links to each field, taken from the routine's line in its automation status: `grokbot://app/v1/sidebar?target=webhook-url&automation=<folder id>`, plus `target=webhook-key` and `target=webhook-header`. Fallback: click the bot's name in the chat header (or press Cmd+Shift+I) and pick the routine under **Routines**.
-3. The bot asks for the **key** with a masked secret-request card. The value lands as a box env var (e.g. `SENDPROMPT_WAKE_KEY`); the bot never sees or prints it. You paste the non-secret **URL** in chat.
-4. The bot, or whoever owns the bridge server, writes both into the bridge `.env` with a script that reads the env var (no echo), backs up `.env` first and keeps it out of deploy rsync, and sets `SENDPROMPT_HOLD_MAX_SEC=1800`. Hand-editing `.env` is only a fallback.
+3. The bot asks for the **key** with a masked secret-request card. The value lands as a box env var (e.g. `SENDPROMPT_WAKE_KEY`); the bot never sees or prints it. You paste the **URL** in chat. It is not secret unless it embeds a token in its path; then treat it like the key.
+4. The bot, or whoever owns the bridge server, writes both into the bridge `.env` with a script that reads the env var (no echo), backs up `.env` first and keeps it out of deploy rsync, and sets `SENDPROMPT_HOLD_MAX_SEC=1800`. The script writes **in place** (`cat new > .env`, not `mv`) so the inode, owner and mode survive single-file bind mounts and root-owned read-only perms. Then recreate the bridge container with `docker compose up -d` (`docker restart` and `docker compose restart` do not re-read `env_file`). Hand-editing `.env` is only a fallback.
 5. Header shape: confirm on first setup, using the routine's Authorization header field, then set `SENDPROMPT_WAKE_HEADER` to match.
 
 | Bridge env | Default | Meaning |
@@ -489,7 +489,7 @@ POST body: `{reason, heldCount, firstHeldAt}` — no tokens, no message content.
 
 On the box, the routine's ensure script may need `SENDPROMPT_TUNNEL_URL` (optional): the plugin's generic `scripts/ensure-sendprompt-tunnel.sh` reads it, but it's only a fallback for setups whose ensure script doesn't already know its URL.
 
-**Turn off:** blank `SENDPROMPT_WAKE_URL` / `SENDPROMPT_WAKE_KEY` and restart the bridge, or pause the routine.
+**Turn off:** blank `SENDPROMPT_WAKE_URL` / `SENDPROMPT_WAKE_KEY` and recreate the bridge container with `docker compose up -d` (`docker restart` and `docker compose restart` do not re-read `env_file`), or pause the routine.
 
 **Troubleshooting**
 

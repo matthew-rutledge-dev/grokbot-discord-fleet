@@ -22,7 +22,7 @@ Operator-driven only. Never run as silent postinstall.
 
 - **One routine per Grok Bot account.** All bots on an account share one box, so one routine is enough. Before creating, **check whether a wake routine already exists** (list routines; look for a webhook-triggered routine whose prompt runs `ensure-sendprompt-tunnel.sh`). If it exists, reuse it — do not create a second one.
 - **Never see or print the key.** Ask for it only through a masked secret-request card, so it lands as a box env var (e.g. `SENDPROMPT_WAKE_KEY`) without passing through chat. Never ask for it in plain chat, and never echo, log, or commit it.
-- The webhook URL is not secret, so the user can paste it in chat. Still keep it (and any real automation/folder ID) out of git and public evidence lines.
+- The webhook URL is not secret unless it embeds a token in its path; then treat it like the key (masked card, never in chat). Either way, keep it and any real automation/folder ID out of git and public evidence lines.
 - Writing the bridge `.env` is done by the bot or whoever owns the bridge host, via a script that reads the env var. The user hand-editing `.env` is a fallback, not the default.
 
 ## Steps
@@ -52,7 +52,7 @@ Only if the links don't work, give the menu path: click the bot's name in the ch
 
 ### d. Collect the values (least user work)
 - **Key (default):** ask with a masked secret-request card targeting a box env var such as `SENDPROMPT_WAKE_KEY`. You only verify present or missing; you never see or print the value.
-- **URL:** the user pastes the non-secret POST URL in chat.
+- **URL:** the user pastes the POST URL in chat. It is not secret unless it embeds a token in its path; then treat it like the key and collect it with a masked card too.
 - **Header:** the Authorization header field shows the shape the routine expects. Header shape: confirm on first setup, then set `SENDPROMPT_WAKE_HEADER` to match. The default is `Authorization`, which sends `Bearer <key>`; any other header name sends the raw key, e.g. `X-Webhook-Key: <key>`.
 
 ### e. Write the bridge `.env` (no echo)
@@ -63,14 +63,15 @@ set -euo pipefail; umask 077
 f=<bridge-dir>/.env; cp -p "$f" "$f.bak.$(date +%Y%m%d%H%M%S)"
 { grep -vE '^(SENDPROMPT_WAKE_URL|SENDPROMPT_WAKE_KEY|SENDPROMPT_HOLD_MAX_SEC)=' "$f" || true
   printf 'SENDPROMPT_WAKE_URL=%s\nSENDPROMPT_WAKE_KEY=%s\nSENDPROMPT_HOLD_MAX_SEC=1800\n' "$SENDPROMPT_WAKE_URL" "$SENDPROMPT_WAKE_KEY"
-} > "$f.new" && mv "$f.new" "$f"
+} > "$f.new" && cat "$f.new" > "$f" && rm "$f.new"   # in place: keeps inode, owner, mode
 grep -cE '^SENDPROMPT_WAKE_(URL|KEY)=.+' "$f"   # prints 2; never cat the file
 ```
 
+- **Why in place:** the bridge `.env` is often a single-file bind mount and root-owned/read-only to the container. `mv` would swap in a new inode (the mount keeps pointing at the old file) and reset the owner and mode. `cat > "$f"` rewrites the same inode. `umask 077` keeps `$f.new` private (0600), and `cp -p` keeps the backup's mode. Run it as the file's owner (e.g. root via sudo).
 - Set `SENDPROMPT_HOLD_MAX_SEC=1800` so held messages outlast the wake, and `SENDPROMPT_WAKE_HEADER` if the header shape differs from the default.
 - Keep the deploy rules: the runtime `.env` stays out of the rsync, back it up first, compare checksums, and keep it root-owned and read-only where it's bind-mounted. Never run `docker compose config` in shared logs.
 - If the bridge host is remote, send the values over stdin (e.g. ssh), never as command-line arguments.
-- Restart the bridge. Names per bridge 0.2.12 (https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge/pull/9).
+- Then recreate the bridge container with `docker compose up -d` (`docker restart` and `docker compose restart` do not re-read `env_file`). Names per bridge 0.2.12 (https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge/pull/9).
 - **Fallback only:** the user copies the URL and key from the routine panel and edits the bridge `.env` by hand.
 
 ### f. Verify (no secrets)
@@ -79,5 +80,5 @@ grep -cE '^SENDPROMPT_WAKE_(URL|KEY)=.+' "$f"   # prints 2; never cat the file
 
 ## Turn it off
 
-- Blank `SENDPROMPT_WAKE_URL` / `SENDPROMPT_WAKE_KEY` in the bridge `.env` and restart the bridge, **or**
+- Blank `SENDPROMPT_WAKE_URL` / `SENDPROMPT_WAKE_KEY` in the bridge `.env` and recreate the bridge container with `docker compose up -d` (`docker restart` and `docker compose restart` do not re-read `env_file`), **or**
 - Pause (or delete) the routine. Messages then fall back to hold-then-fail.
