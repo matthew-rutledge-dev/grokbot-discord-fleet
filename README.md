@@ -460,6 +460,8 @@ Check with `scripts/sendprompt-tunnel-watchdog.sh --selftest`.
 
 ## Wake on sleep (optional)
 
+Bridge side: [grok-bot-discord-bridge PR #9](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge/pull/9) (bridge 0.2.12).
+
 Grok Bot boxes hibernate. While asleep the sendPrompt tunnel is down, so the bridge holds Discord messages and then red-Xes them after its hold window. The bridge's optional wake hook fixes this:
 
 1. sendPrompt hits a retryable tunnel error (530, 1033, 502–504, or a network error).
@@ -472,19 +474,21 @@ Set up the routine with the `discord-wake-on-sleep` skill: **one routine per Gro
 |---|---|---|
 | `SENDPROMPT_WAKE_URL` | blank (off) | Routine webhook URL |
 | `SENDPROMPT_WAKE_KEY` | blank (off) | Routine sender key; sent only in a header, never in the body |
-| `SENDPROMPT_WAKE_HEADER` | `Authorization: Bearer <key>` | Header that carries the key (**confirm against the bridge release**) |
-| `SENDPROMPT_HOLD_MAX_SECONDS` | `900` | How long the bridge holds messages before giving up |
+| `SENDPROMPT_WAKE_HEADER` | `Authorization` | Header that carries the key. `Authorization` sends `Bearer <key>`; any other name sends the raw key (e.g. `X-Webhook-Key: <key>`). **Header shape: confirm on first setup.** |
+| `SENDPROMPT_HOLD_MAX_SEC` | `900` | How long the bridge holds messages before giving up; **1800 recommended** when the wake hook is set |
 
-POST body: `{reason, heldCount, firstHeldAt}` — no tokens, no message content. Env names must match the bridge's wake hook release.
+POST body: `{reason, heldCount, firstHeldAt}` — no tokens, no message content. Env names match bridge 0.2.12 ([PR #9](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge/pull/9)).
+
+On the box, the routine's ensure script may need `SENDPROMPT_TUNNEL_URL` (optional): the plugin's generic `scripts/ensure-sendprompt-tunnel.sh` reads it, but it's only a fallback for setups whose ensure script doesn't already know its URL.
 
 **Turn off:** blank `SENDPROMPT_WAKE_URL` / `SENDPROMPT_WAKE_KEY` and restart the bridge, or pause the routine.
 
 **Troubleshooting**
 
-- *Messages still red-X:* the box takes longer to wake + reconnect than `SENDPROMPT_HOLD_MAX_SECONDS`; raise it, and check the routine actually ran.
-- *Routine never runs:* wake URL/key blank or mistyped; header shape doesn't match what the routine expects (see `SENDPROMPT_WAKE_HEADER`); the routine is paused.
+- *Messages still red-X:* the box takes longer to wake + reconnect than `SENDPROMPT_HOLD_MAX_SEC`; raise it (1800 recommended), and check the routine actually ran.
+- *Routine never runs:* wake URL/key blank or mistyped; header shape doesn't match what the routine webhook expects (try `Authorization` vs a raw-key header via `SENDPROMPT_WAKE_HEADER`); the routine is paused.
 - *Fires only once:* expected — one POST per outage until a sendPrompt succeeds.
-- *Routine runs but tunnel stays down:* `SENDPROMPT_TUNNEL_URL` / connector settings missing from the routine's environment; check the `ensure-sendprompt-tunnel` status line and see **sendPrompt tunnel watchdog** above.
+- *Routine runs but tunnel stays down:* the ensure script can't find its tunnel URL / connector settings (set `SENDPROMPT_TUNNEL_URL` if using the plugin's generic script); check the `ensure-sendprompt-tunnel` status line and see **sendPrompt tunnel watchdog** above.
 - *Duplicate routines:* delete extras; one per account is enough.
 
 ## Secrets

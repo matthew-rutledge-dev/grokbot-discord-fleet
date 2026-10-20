@@ -7,7 +7,7 @@ description: use when installer wants Discord messages to wake a hibernated Grok
 
 ## When to use
 
-- Grok Bot boxes hibernate for hours; while asleep the sendPrompt tunnel is down, the bridge holds the Discord message (default 15 min, `SENDPROMPT_HOLD_MAX_SECONDS`) and then red-Xes it.
+- Grok Bot boxes hibernate for hours; while asleep the sendPrompt tunnel is down, the bridge holds the Discord message (default 900 s, `SENDPROMPT_HOLD_MAX_SEC`; 1800 recommended with the wake hook) and then red-Xes it.
 - Operator explicitly asks to set up wake-on-sleep, or asks why Discord messages fail while the box sleeps.
 
 Operator-driven only. Never run as silent postinstall.
@@ -15,7 +15,7 @@ Operator-driven only. Never run as silent postinstall.
 ## How it works
 
 1. A Discord message arrives; the bridge's sendPrompt hits a retryable tunnel error (530, 1033, 502–504, or a network error).
-2. The bridge POSTs **once per outage** to `SENDPROMPT_WAKE_URL` (a Grok Bot webhook-triggered routine), with the key in a header only. It is debounced until the next successful sendPrompt.
+2. The bridge POSTs **once per outage** to `SENDPROMPT_WAKE_URL` (a Grok Bot webhook-triggered routine), with the key in a header only (never the body). Body: `{reason, heldCount, firstHeldAt}`. It is debounced until the next successful sendPrompt.
 3. The routine wakes the box and runs `scripts/ensure-sendprompt-tunnel.sh`; the tunnel comes up and the bridge delivers the held messages.
 
 ## Hard rules
@@ -36,12 +36,12 @@ List the account's routines. If a webhook-triggered wake routine already exists,
 
   > Box woke for a held Discord message. Run `bash <plugin-root>/scripts/ensure-sendprompt-tunnel.sh` to bring the sendPrompt tunnel up. Then end quietly — do not message the user.
 
-  `<plugin-root>` is the installed plugin directory (`${GROK_PLUGIN_ROOT}` under Grok, `${CURSOR_PLUGIN_ROOT}` under Cursor); the script is at `scripts/ensure-sendprompt-tunnel.sh` relative to it. Use the absolute path of the install on this box. The script needs `SENDPROMPT_TUNNEL_URL` (and any other `SENDPROMPT_*` settings) available in the routine's environment, e.g. via Bot Secrets.
+  `<plugin-root>` is the installed plugin directory (`${GROK_PLUGIN_ROOT}` under Grok, `${CURSOR_PLUGIN_ROOT}` under Cursor); the script is at `scripts/ensure-sendprompt-tunnel.sh` relative to it. Use the absolute path of the install on this box. The plugin's generic `ensure-sendprompt-tunnel.sh` reads `SENDPROMPT_TUNNEL_URL` (plus any other `SENDPROMPT_*` settings) from the routine's environment, e.g. via Bot Secrets. That variable is only a fallback: if your setup's own ensure script already knows its tunnel URL, point the routine at that script instead and leave `SENDPROMPT_TUNNEL_URL` unset.
 
 ### c. Hand off to the operator
 Tell the operator (no values):
 - Open the routine panel, copy the **webhook URL** and **sender key**.
-- In the bridge `.env` set `SENDPROMPT_WAKE_URL=<webhook URL>` and `SENDPROMPT_WAKE_KEY=<sender key>`; optionally `SENDPROMPT_WAKE_HEADER` (default sends `Authorization: Bearer <key>`; confirm the header shape against the bridge release). Restart the bridge.
+- In the bridge `.env` set `SENDPROMPT_WAKE_URL=<webhook URL>` and `SENDPROMPT_WAKE_KEY=<sender key>`; optionally `SENDPROMPT_WAKE_HEADER` (default `Authorization`, which sends `Bearer <key>`; any other header name sends the raw key, e.g. `X-Webhook-Key: <key>`; header shape: confirm on first setup). Set `SENDPROMPT_HOLD_MAX_SEC=1800` so held messages outlast the wake. Restart the bridge. Names per bridge 0.2.12 (https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge/pull/9).
 
 ### d. Verify (no secrets)
 - Let the box sleep (or stop the tunnel connector), send a Discord message, and confirm: the routine ran once, the tunnel came back, the held message was delivered.

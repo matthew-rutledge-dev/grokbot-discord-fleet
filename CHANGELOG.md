@@ -3,7 +3,7 @@
 ## 0.3.29
 
 - New skill `discord-wake-on-sleep`: one idempotent webhook-triggered routine per Grok Bot account that runs `scripts/ensure-sendprompt-tunnel.sh` on wake and ends quietly; operator copies webhook URL + sender key into the bridge `.env`; bot never sees the key. Includes turn-off steps.
-- Docs: README **Wake on sleep (optional)** — flow, bridge env (`SENDPROMPT_WAKE_URL`, `SENDPROMPT_WAKE_KEY`, `SENDPROMPT_WAKE_HEADER`, `SENDPROMPT_HOLD_MAX_SECONDS`), once-per-outage firing, troubleshooting. Header shape to be confirmed against the bridge release.
+- Docs: README **Wake on sleep (optional)** — flow, bridge env (`SENDPROMPT_WAKE_URL`, `SENDPROMPT_WAKE_KEY`, `SENDPROMPT_WAKE_HEADER` default `Authorization` → `Bearer <key>`, other names send the raw key; `SENDPROMPT_HOLD_MAX_SEC` default 900, 1800 recommended with wake), body `{reason, heldCount, firstHeldAt}`, once-per-outage firing, troubleshooting. Names match bridge 0.2.12 (https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge/pull/9). Header shape: confirm on first setup. `SENDPROMPT_TUNNEL_URL` documented as an optional fallback for the routine.
 - Bump manifests, MCP packages, serverInfo, and Discord User-Agent to `0.3.29`.
 
 ## 0.3.28
