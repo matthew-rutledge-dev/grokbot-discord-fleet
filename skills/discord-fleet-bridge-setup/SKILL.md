@@ -108,6 +108,10 @@ Discord DMs are channels; there is **no** `send_dm` tool in this plugin. Use pla
 
 Wake dual-deliver needs agents to `POST /callback` themselves. After health verifies, run skill **`discord-fleet-callback-setup`** so the installer files durable Bot Secrets / plugin vars `DISCORD_BRIDGE_CALLBACK_TOKEN` and `DISCORD_BRIDGE_CALLBACK_URL` (no host vault hop). This is a first-class setup step, not docs-only. For multi-agent fleets, each mapped agent needs the same Secrets.
 
+## Then — Wake on sleep (recommended)
+
+Right after callback setup, run skill **`discord-wake-on-sleep`**. **Why:** Grok Bot computers sleep a lot when idle, and Discord messages alone can't wake them. Without this step, messages sent while the bot is asleep can fail after the bridge's hold window (shown as a red X in Discord). The skill sets up one webhook-triggered routine per Grok Bot account and the bridge `SENDPROMPT_WAKE_URL` / `SENDPROMPT_WAKE_KEY` (plus `SENDPROMPT_HOLD_MAX_SEC=1800`), so the bridge wakes the computer once per outage. Skipping is allowed but **not recommended**.
+
 ## Related
 
 - **Plugin MCP deps (if you also cloned this plugin):** run `./scripts/bootstrap-mcp.sh` (Windows: `.\scripts\bootstrap-mcp.ps1`) in the plugin root before status/manage MCP will load — separate from bridge `npm ci`.
@@ -115,5 +119,6 @@ Wake dual-deliver needs agents to `POST /callback` themselves. After health veri
 - Boundary: skill `discord-fleet-boundary`
 - After setup: skill `discord-fleet-status` + status MCP `fleet_health`
 - **Required for self-callback:** skill `discord-fleet-callback-setup`
+- **Recommended next:** skill `discord-wake-on-sleep` (Wake on sleep)
 - Wake hop encode/decode: inbound is exactly `d:<slug>:<msgId>` (DM slug default `dm`; `g` may be `null`), thin JSON `{id,g,u,map,a?}`, then human content; skill `discord-fleet-hop-shorthand` — Discord OUT is human text and/or allowed `/callback` attachments (same `/callback` for DM `channelId`)
 - Bridge SoT: [matthew-rutledge-dev/grok-bot-discord-bridge](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge)

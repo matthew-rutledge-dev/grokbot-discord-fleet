@@ -16,7 +16,7 @@ Do not merge this plugin into a shared general catalog without an explicit maint
 |-------|------|
 | `discord-fleet-status` MCP | Optional bridge `GET /healthz` probe + Discord REST identity/guild/channel reads |
 | `discord-fleet-manage` MCP | Boundary docs, dry-run channel-map plans, gated Discord REST (`confirm=true`): inspect/resolve, message history, post message, bot channel perms |
-| Skills | Boundary, status, manage planning, operator-driven optional bridge setup, **callback-setup** (self-callback secrets), hop-shorthand encode/decode |
+| Skills | Boundary, status, manage planning, operator-driven optional bridge setup, **callback-setup** (self-callback secrets), **wake-on-sleep** (recommended), hop-shorthand encode/decode |
 
 ## Layout (Grok-canonical)
 
@@ -37,7 +37,7 @@ Marketplace index tooling (`xai-org/plugin-marketplace`) discovers `.grok-plugin
 
 ### Grok Build marketplace install
 
-The official [xAI plugin-marketplace PR #1088](https://github.com/xai-org/plugin-marketplace/pull/1088) is open for this plugin. After xAI merges it, install the catalog entry with:
+The official [xAI plugin-marketplace PR #1088](https://github.com/xai-org/plugin-marketplace/pull/1088) is still open, not merged (rechecked 2026-10-20). Until xAI merges it, use **Local/manual install** below. After it merges, install the catalog entry with:
 
 ```bash
 grok plugin marketplace list
@@ -147,6 +147,7 @@ Follow **[Discord bot token & invite](#discord-bot-token--invite)** below for th
 1. Set plugin variable `DISCORD_BOT_TOKEN` (Plugins → Configure / host env injection — **prefer vault → runtime env** over plaintext `.env` on disk when avoidable).
 2. Optionally set `DISCORD_GUILD_ID` and/or `DISCORD_BRIDGE_HEALTH_URL` (self-hosted bridge `/healthz` — skill `discord-fleet-bridge-setup`).
 3. For wake **self-callback / dual-deliver**, file `DISCORD_BRIDGE_CALLBACK_TOKEN` + `DISCORD_BRIDGE_CALLBACK_URL` via skill `discord-fleet-callback-setup` (per-bot Secrets for multi-agent fleets).
+4. **Wake on sleep (recommended)** — right after callback setup, run skill `discord-wake-on-sleep` so a bridge wake hook can wake a sleeping Grok Bot computer. Without it, Discord messages sent while the bot sleeps can red-X after the hold window. Skipping is allowed but not recommended. See **Wake on sleep (recommended)**.
 
 You are **not** connecting to another installer's Discord, vault, or provider. `DISCORD_BOT_TOKEN` is required for the product: without it, the Discord REST status/manage tools cannot operate. An optional bridge health check can report liveness, but it is not a substitute for the Discord REST integration.
 
@@ -165,11 +166,12 @@ Each marketplace installer creates **their own** Discord application and bot. Th
 2. **Copy the bot token** — Bot tab → **Reset Token** / **Copy**. Set it as plugin variable / Bot Secret / env **`DISCORD_BOT_TOKEN`**. Prefer vault → runtime env. Never commit; never paste in chat.
 3. **Privileged Gateway Intents** (Portal → Bot → Privileged Gateway Intents) — match what you will run:
    - **This plugin alone** (Discord REST status/manage MCP) — **no** privileged gateway intents required (HTTP REST with the bot token only; this plugin does not open a Discord Gateway).
-   - **Optional self-hosted wake bridge** (`matthew-rutledge-dev/grok-bot-discord-bridge`) — enable intents the bridge uses: **Message Content Intent** (privileged; required to read guild/DM message bodies for wake), plus non-privileged **Guilds**, **Guild Messages**, and **Direct Messages** when you want DM wake (see bridge README / skill `discord-fleet-bridge-setup`).
+   - **Optional self-hosted wake bridge** (`matthew-rutledge-dev/grok-bot-discord-bridge`) — enable intents the bridge uses: **Message Content Intent** (privileged; required to read guild/DM message bodies for wake), plus non-privileged **Guilds**, **Guild Messages**, **Direct Messages** (DM wake) and **Guild Voice States** (non-privileged; the bridge requests it for its voice-channel play/stream features). See bridge README / skill `discord-fleet-bridge-setup`.
 4. **Invite the bot to your guild** — Portal → OAuth2 → **URL Generator**: scope **`bot`**; select the permissions in **[Discord bot permissions](#discord-bot-permissions)** below (messaging minimum, plus moderation if you will use manage MCP timeout/kick/ban/delete/purge). Open the generated URL while logged into Discord, select **your** guild, authorize. **Creating a token does not grant channel access by itself** — see permissions section (role + channel overwrites).
 5. **Optional plugin vars** — `DISCORD_GUILD_ID` (default guild snowflake for status/manage tools); `DISCORD_BRIDGE_HEALTH_URL` (full URL to **your** bridge `GET /healthz`, e.g. `http://127.0.0.1:18083/healthz`) when you self-host a bridge.
 6. **Optional dual-deliver / self-callback** (separate self-hosted bridge) — file **`DISCORD_BRIDGE_CALLBACK_TOKEN`** + **`DISCORD_BRIDGE_CALLBACK_URL`** via secret cards (skill `discord-fleet-callback-setup`). Auth is **header-only** as of bridge **0.2.4+**: `Authorization: Bearer <token>` or header **`x-callback-token`**. Query `?token=` is **rejected (401)** — do not use.
-7. **Skills** — bot/bridge bring-up: `discord-fleet-bridge-setup`; callback secrets: `discord-fleet-callback-setup`; wake hop / dual-deliver: `discord-fleet-hop-shorthand` (prefer `process.env.DISCORD_BRIDGE_CALLBACK_*` on each woken bot).
+7. **Wake on sleep (recommended)** — after callback setup, run skill `discord-wake-on-sleep` (one webhook-triggered routine per Grok Bot account + bridge `SENDPROMPT_WAKE_URL` / `SENDPROMPT_WAKE_KEY`). Grok Bot computers sleep when idle and Discord alone can't wake them; without this, messages sent while asleep can red-X after the hold window. Skipping is allowed but not recommended.
+8. **Skills** — bot/bridge bring-up: `discord-fleet-bridge-setup`; callback secrets: `discord-fleet-callback-setup`; wake on sleep (recommended): `discord-wake-on-sleep`; wake hop / dual-deliver: `discord-fleet-hop-shorthand` (prefer `process.env.DISCORD_BRIDGE_CALLBACK_*` on each woken bot).
 
 ## Discord bot permissions
 
@@ -401,7 +403,41 @@ CALLBACK_BASE_URL=https://callback.example.com
 GROK_BOT_SENDPROMPT_URL=https://sendprompt.example.com
 ```
 
-Keep the bridge loopback-only behind the tunnel, rotate `CALLBACK_TOKEN`, and keep secrets in the host vault/runtime environment. The tunnel and wake gateway are optional and are not provided by this plugin. For `/healthz`, keep using the existing loopback binding and SSH tunnel workflow rather than exposing the bridge port.
+### Durable sendPrompt tunnel (Grok Bot computer)
+
+The bridge reaches the Grok Bot computer's local sendPrompt port through a named Cloudflare Tunnel. Placeholders only; use your own names:
+
+```bash
+cloudflared tunnel login                                     # once, in your own browser
+cloudflared tunnel create example-tunnel                     # writes credentials JSON under ~/.cloudflared/
+cloudflared tunnel route dns example-tunnel sendprompt.example.com
+cloudflared tunnel --protocol http2 run --url http://127.0.0.1:<sendprompt-port> example-tunnel
+```
+
+Use `--protocol http2` where UDP is blocked (QUIC won't connect). Keep the credentials JSON out of git and chat.
+
+Keep that connector running with a supervisor and point the plugin scripts at it:
+
+```bash
+# <state-dir>/sendprompt-supervise.sh  (chmod +x; path must not contain spaces)
+#!/usr/bin/env bash
+exec 9>"${SENDPROMPT_STATE_DIR:-$HOME/.local/state/grokbot-sendprompt}/supervise.lock"
+flock -n 9 || exit 0                                         # held lock = "supervisor up" for ensure
+while true; do
+  cloudflared tunnel --protocol http2 run --url http://127.0.0.1:<sendprompt-port> example-tunnel 9>&-
+  sleep 5
+done
+```
+
+```bash
+export SENDPROMPT_TUNNEL_URL=https://sendprompt.example.com/
+export SENDPROMPT_SUPERVISOR=<state-dir>/sendprompt-supervise.sh   # word-split: no spaces
+export SENDPROMPT_CONNECTOR_MATCH=example-tunnel                    # substring of the connector cmdline
+```
+
+Then `scripts/ensure-sendprompt-tunnel.sh` starts the supervisor and watchdog if they're down (see **sendPrompt tunnel watchdog**). Run it from startup and from the wake routine.
+
+Keep the bridge loopback-only behind the tunnel, rotate `CALLBACK_TOKEN`, and keep secrets in the host vault/runtime environment. The tunnel itself is yours to run (setup above); this plugin only ships the ensure/watchdog scripts. For `/healthz`, keep using the existing loopback binding and SSH tunnel workflow rather than exposing the bridge port.
 
 ## Bridge operator notes (generic)
 
@@ -419,14 +455,59 @@ Keep the bridge loopback-only behind the tunnel, rotate `CALLBACK_TOKEN`, and ke
 - **Tunnel connector:** it does not come back on its own after a host restart; run `scripts/ensure-sendprompt-tunnel.sh` from startup. On networks that block UDP, run the connector with `--protocol http2` (QUIC won't connect). The watchdog restarts the connector and checks the public URL.
 - **Deploy:** exclude the runtime `security.json`, `channel-map.json` and `.env` from the rsync; back them up first and compare checksums after. Configs are bind-mounted read-only and root-owned. Never run `docker compose config` where logs are shared: it expands secrets.
 
+## Wake on sleep (recommended)
+
+Standard setup step, right after bridge setup and callback setup. **Why:** Grok Bot computers sleep a lot when idle, and Discord messages alone can't wake them. Without this step, messages sent while the bot is asleep can fail after the bridge's hold window (shown as a red X in Discord). Skipping is allowed but **not recommended**.
+
+Bridge side: requires bridge **>= 0.2.12**; see the [bridge README wake section](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge#sendprompt-wake-hook-optional-0212).
+
+Grok Bot boxes hibernate. While asleep the sendPrompt tunnel is down, so the bridge holds Discord messages and then red-Xes them after its hold window. The bridge's wake hook fixes this:
+
+1. sendPrompt hits a retryable tunnel error (530, 1033, 502–504, or a network error).
+2. The bridge POSTs **once per outage** to a Grok Bot **webhook-triggered routine** (debounced until the next successful sendPrompt).
+3. The routine wakes the box and runs `scripts/ensure-sendprompt-tunnel.sh`; the tunnel returns and held messages deliver.
+
+Set up the routine with the `discord-wake-on-sleep` skill: **one routine per Grok Bot account** (all bots on an account share one box), reused if it already exists. Never commit the URL, the key, or a real automation folder id.
+
+**Setup flow (least user work):**
+
+1. The bot creates (or reuses) the routine. The routine panel has three fields: **POST URL**, **key**, and an **Authorization header** field.
+2. The bot gives you deep links to each field, taken from the routine's line in its automation status: `grokbot://app/v1/sidebar?target=webhook-url&automation=<folder id>`, plus `target=webhook-key` and `target=webhook-header`. Fallback: click the bot's name in the chat header (or press Cmd+Shift+I) and pick the routine under **Routines**.
+3. The bot asks for the **key** with a masked secret-request card. The value lands as a box env var (e.g. `SENDPROMPT_WAKE_KEY`); the bot never sees or prints it. You paste the **URL** in chat. It is not secret unless it embeds a token in its path; then treat it like the key.
+4. The bot, or whoever owns the bridge server, writes both into the bridge `.env` with a script that reads the env var (no echo), backs up `.env` first and keeps it out of deploy rsync, and sets `SENDPROMPT_HOLD_MAX_SEC=1800`. The script writes **in place** (`cat new > .env`, not `mv`) so the inode, owner and mode survive single-file bind mounts and root-owned read-only perms. Then recreate the bridge container with `docker compose up -d` (`docker restart` and `docker compose restart` do not re-read `env_file`). Hand-editing `.env` is only a fallback.
+5. The default header, `Authorization: Bearer <key>`, is verified. A successful wake POST returns HTTP 200 with JSON `{success:true, runUuid}`.
+
+| Bridge env | Default | Meaning |
+|---|---|---|
+| `SENDPROMPT_WAKE_URL` | blank (off) | Routine webhook URL |
+| `SENDPROMPT_WAKE_KEY` | blank (off) | Routine sender key; sent only in a header, never in the body |
+| `SENDPROMPT_WAKE_HEADER` | `Authorization` | Header that carries the key. `Authorization` sends `Bearer <key>`; any other name sends the raw key (e.g. `X-Webhook-Key: <key>`). The default is verified against the Grok Bot routine webhook. |
+| `SENDPROMPT_HOLD_MAX_SEC` | `900` | How long the bridge holds messages before giving up; **1800 recommended** when the wake hook is set |
+
+POST body: `{reason, heldCount, firstHeldAt}` — no tokens, no message content. Env names match bridge >= 0.2.12 ([wake section](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge#sendprompt-wake-hook-optional-0212)).
+
+On the Grok Bot computer: `SENDPROMPT_TUNNEL_URL` is **required**: `scripts/ensure-sendprompt-tunnel.sh` exits without it. Set it to the public URL of this computer's sendPrompt tunnel (e.g. `https://sendprompt.example.com/`) as a box env var / Bot Secret so the routine sees it. The routine prompt needs the **absolute** path to the plugin install; the desktop app keeps its own copy (see **Install locations**), so the skill resolves it once (`$GROK_PLUGIN_ROOT` or `find / -path '*/grokbot-discord-fleet/scripts/ensure-sendprompt-tunnel.sh'`) and writes it into the prompt.
+
+**End-to-end check:** DM the bot and get a reply. Optional sleep test: let the computer idle or hibernate, send a message, and confirm the wake routine ran and the reply arrived within the hold window.
+
+**Turn off:** blank `SENDPROMPT_WAKE_URL` / `SENDPROMPT_WAKE_KEY` and recreate the bridge container with `docker compose up -d` (`docker restart` and `docker compose restart` do not re-read `env_file`), or pause the routine.
+
+**Troubleshooting**
+
+- *Messages still red-X:* the box takes longer to wake + reconnect than `SENDPROMPT_HOLD_MAX_SEC`; raise it (1800 recommended), and check the routine actually ran.
+- *Routine never runs:* a good wake POST returns HTTP 200 with JSON `{success:true, runUuid}`. If it doesn't, the wake URL/key is blank or mistyped, `SENDPROMPT_WAKE_HEADER` was changed from the default `Authorization` (unset it), or the routine is paused.
+- *Fires only once:* expected — one POST per outage until a sendPrompt succeeds.
+- *Routine runs but tunnel stays down:* the ensure script can't find its tunnel URL / connector settings (`SENDPROMPT_TUNNEL_URL` is required and must be visible to the routine); check the `ensure-sendprompt-tunnel` status line and see **sendPrompt tunnel watchdog** below.
+- *Duplicate routines:* delete extras; one per account is enough.
+
 ## Skills
 
 - `discord-fleet-boundary` — always on for fleet work; manage/status vs wake path; **per-installer credentials, not shared provider**; points at callback token/URL + callback-setup for wake replies
 - `discord-fleet-status` — health/status checks via status MCP
 - `discord-fleet-manage` — channel-binding plans / gated inspect + message history / post / bot channel perms (dry-run / confirm)
-- `discord-fleet-bridge-setup` — **operator-driven** optional wake-bridge setup on an explicit ask (clone/deploy/verify `/healthz` on **your** host; never silent postinstall; never `curl|bash`; prefer plugin vars / vault→runtime env over plaintext `.env`). After the bridge is up, run `discord-fleet-callback-setup` for agent self-callback. Skill includes short **Windows vs Linux** notes.
+- `discord-fleet-bridge-setup` — **operator-driven** optional wake-bridge setup on an explicit ask (clone/deploy/verify `/healthz` on **your** host; never silent postinstall; never `curl|bash`; prefer plugin vars / vault→runtime env over plaintext `.env`). After the bridge is up, run `discord-fleet-callback-setup` for agent self-callback, then `discord-wake-on-sleep` (recommended). Skill includes short **Windows vs Linux** notes.
 - `discord-fleet-callback-setup` — **first-class** operator-driven setup for durable `DISCORD_BRIDGE_CALLBACK_TOKEN` + `DISCORD_BRIDGE_CALLBACK_URL` (secure secret card; verify present/missing only; safe curl smoke; per-bot Secrets for multi-agent fleets). Not silent postinstall.
-- `discord-wake-on-sleep` — operator-driven: one webhook-triggered routine per Grok Bot account (idempotent) that runs `scripts/ensure-sendprompt-tunnel.sh` when the bridge wake hook fires; operator copies webhook URL + sender key into the bridge `.env` (bot never sees the key)
+- `discord-wake-on-sleep` — **recommended** setup step right after callback setup: one webhook-triggered routine per Grok Bot account (idempotent) that runs `scripts/ensure-sendprompt-tunnel.sh` when the bridge wake hook fires; key collected by masked secret card (bot never sees it), URL pasted in chat, no-echo `.env` write
 - `discord-fleet-hop-shorthand` — inbound wake is exactly `d:<slug>:<msgId>` (guild slug from channel-map; DMs default slug `dm`, `g` may be `null`), thin JSON `{id,g,u,map}` with optional `a:` CDN attachment refs, then human content; after decode/absorb, Grok chat shows **human content only** (strip `d:` + JSON); Discord OUT is human text and/or allowed `/callback` attachments — never hop codes; same `/callback` with DM `channelId`; dual-deliver prefers `process.env.DISCORD_BRIDGE_CALLBACK_*` (no host-vault hop required; never ask another agent to deliver)
 
 ## Submit to Cursor Marketplace (optional)
@@ -457,47 +538,6 @@ After xAI merges the PR, use the [Grok Build marketplace install](#grok-build-ma
 | `SENDPROMPT_INTERVAL` / `_FAIL_LIMIT` / `_JUMP_SECS` / `_DAILY_HOUR` / `_HEALTHY_CODE` | `60` / `2` / `180` / `6` (empty disables) / `404` |
 
 Check with `scripts/sendprompt-tunnel-watchdog.sh --selftest`.
-
-## Wake on sleep (optional)
-
-Bridge side: [grok-bot-discord-bridge PR #9](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge/pull/9) (bridge 0.2.12).
-
-Grok Bot boxes hibernate. While asleep the sendPrompt tunnel is down, so the bridge holds Discord messages and then red-Xes them after its hold window. The bridge's optional wake hook fixes this:
-
-1. sendPrompt hits a retryable tunnel error (530, 1033, 502–504, or a network error).
-2. The bridge POSTs **once per outage** to a Grok Bot **webhook-triggered routine** (debounced until the next successful sendPrompt).
-3. The routine wakes the box and runs `scripts/ensure-sendprompt-tunnel.sh`; the tunnel returns and held messages deliver.
-
-Set up the routine with the `discord-wake-on-sleep` skill: **one routine per Grok Bot account** (all bots on an account share one box), reused if it already exists. Never commit the URL, the key, or a real automation folder id.
-
-**Setup flow (least user work):**
-
-1. The bot creates (or reuses) the routine. The routine panel has three fields: **POST URL**, **key**, and an **Authorization header** field.
-2. The bot gives you deep links to each field, taken from the routine's line in its automation status: `grokbot://app/v1/sidebar?target=webhook-url&automation=<folder id>`, plus `target=webhook-key` and `target=webhook-header`. Fallback: click the bot's name in the chat header (or press Cmd+Shift+I) and pick the routine under **Routines**.
-3. The bot asks for the **key** with a masked secret-request card. The value lands as a box env var (e.g. `SENDPROMPT_WAKE_KEY`); the bot never sees or prints it. You paste the **URL** in chat. It is not secret unless it embeds a token in its path; then treat it like the key.
-4. The bot, or whoever owns the bridge server, writes both into the bridge `.env` with a script that reads the env var (no echo), backs up `.env` first and keeps it out of deploy rsync, and sets `SENDPROMPT_HOLD_MAX_SEC=1800`. The script writes **in place** (`cat new > .env`, not `mv`) so the inode, owner and mode survive single-file bind mounts and root-owned read-only perms. Then recreate the bridge container with `docker compose up -d` (`docker restart` and `docker compose restart` do not re-read `env_file`). Hand-editing `.env` is only a fallback.
-5. The default header, `Authorization: Bearer <key>`, is verified. A successful wake POST returns HTTP 200 with JSON `{success:true, runUuid}`.
-
-| Bridge env | Default | Meaning |
-|---|---|---|
-| `SENDPROMPT_WAKE_URL` | blank (off) | Routine webhook URL |
-| `SENDPROMPT_WAKE_KEY` | blank (off) | Routine sender key; sent only in a header, never in the body |
-| `SENDPROMPT_WAKE_HEADER` | `Authorization` | Header that carries the key. `Authorization` sends `Bearer <key>`; any other name sends the raw key (e.g. `X-Webhook-Key: <key>`). The default is verified against the Grok Bot routine webhook. |
-| `SENDPROMPT_HOLD_MAX_SEC` | `900` | How long the bridge holds messages before giving up; **1800 recommended** when the wake hook is set |
-
-POST body: `{reason, heldCount, firstHeldAt}` — no tokens, no message content. Env names match bridge 0.2.12 ([PR #9](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge/pull/9)).
-
-On the box, the routine's ensure script may need `SENDPROMPT_TUNNEL_URL` (optional): the plugin's generic `scripts/ensure-sendprompt-tunnel.sh` reads it, but it's only a fallback for setups whose ensure script doesn't already know its URL.
-
-**Turn off:** blank `SENDPROMPT_WAKE_URL` / `SENDPROMPT_WAKE_KEY` and recreate the bridge container with `docker compose up -d` (`docker restart` and `docker compose restart` do not re-read `env_file`), or pause the routine.
-
-**Troubleshooting**
-
-- *Messages still red-X:* the box takes longer to wake + reconnect than `SENDPROMPT_HOLD_MAX_SEC`; raise it (1800 recommended), and check the routine actually ran.
-- *Routine never runs:* a good wake POST returns HTTP 200 with JSON `{success:true, runUuid}`. If it doesn't, the wake URL/key is blank or mistyped, `SENDPROMPT_WAKE_HEADER` was changed from the default `Authorization` (unset it), or the routine is paused.
-- *Fires only once:* expected — one POST per outage until a sendPrompt succeeds.
-- *Routine runs but tunnel stays down:* the ensure script can't find its tunnel URL / connector settings (set `SENDPROMPT_TUNNEL_URL` if using the plugin's generic script); check the `ensure-sendprompt-tunnel` status line and see **sendPrompt tunnel watchdog** above.
-- *Duplicate routines:* delete extras; one per account is enough.
 
 ## Secrets
 

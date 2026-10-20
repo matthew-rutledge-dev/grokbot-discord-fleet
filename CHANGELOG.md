@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.30
+
+- Wake on sleep is now a standard, **recommended** setup step (was "optional"). README install steps, the `discord-fleet-bridge-setup` skill and the `discord-wake-on-sleep` skill put it right after bridge setup and callback setup. The README section is now **Wake on sleep (recommended)** and sits next to the bridge sections instead of at the end.
+- Up-front note: Grok Bot computers sleep a lot when idle and Discord messages alone can't wake them; without this step, messages sent while the bot is asleep can fail after the hold window (red X in Discord). Skipping is allowed but not recommended.
+- Newcomer-audit fixes:
+  - Wake is now a numbered step right after callback in both install checklists, and the skill list drops the "operator-driven" framing.
+  - `SENDPROMPT_TUNNEL_URL` is documented as **required**, matching `ensure-sendprompt-tunnel.sh`, and setting it is part of the routine setup.
+  - New **Durable sendPrompt tunnel** section: named Cloudflare tunnel create/route/run with placeholders, `--protocol http2` where UDP is blocked, and a supervisor example for `SENDPROMPT_SUPERVISOR` / `SENDPROMPT_CONNECTOR_MATCH`.
+  - Bridge PR links are replaced with the bridge README wake section, and the minimum bridge version (>= 0.2.12) is stated.
+  - The wake skill explains how to resolve the absolute plugin install path (the desktop app keeps its own copy) once and put it in the routine prompt.
+  - End-to-end check added: DM reply, plus an optional sleep test.
+  - Marketplace PR status line rechecked.
+  - Intents now include **Guild Voice States** (non-privileged; used by the bridge's voice features).
+- Public-repo hygiene: removed operator and host names from an old changelog line.
+- Bump manifests, MCP packages, serverInfo, and Discord User-Agent to `0.3.30`.
+
 ## 0.3.29
 
 - New skill `discord-wake-on-sleep`: one idempotent webhook-triggered routine per Grok Bot account that runs `scripts/ensure-sendprompt-tunnel.sh` on wake and ends quietly; the key comes in through a masked secret card and the bot never sees it. Includes turn-off steps.
@@ -102,7 +118,7 @@
 
 ## 0.3.16
 
-- Scrub remaining personal/portfolio framing for public general use: drop Betty-catalog and rumble/Plug operator shorthand from docs and skills; keep installer-neutral wording.
+- Scrub remaining personal/portfolio framing for public general use: drop operator-specific catalog and host/agent shorthand from docs and skills; keep installer-neutral wording.
 - Bump plugin manifests to `0.3.16`.
 
 
