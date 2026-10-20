@@ -468,7 +468,15 @@ Grok Bot boxes hibernate. While asleep the sendPrompt tunnel is down, so the bri
 2. The bridge POSTs **once per outage** to a Grok Bot **webhook-triggered routine** (debounced until the next successful sendPrompt).
 3. The routine wakes the box and runs `scripts/ensure-sendprompt-tunnel.sh`; the tunnel returns and held messages deliver.
 
-Set up the routine with the `discord-wake-on-sleep` skill: **one routine per Grok Bot account** (all bots on an account share one box), reused if it already exists. Copy the routine's webhook URL and sender key from the routine panel into the bridge `.env` yourself; the bot never sees the key. Never commit either value.
+Set up the routine with the `discord-wake-on-sleep` skill: **one routine per Grok Bot account** (all bots on an account share one box), reused if it already exists. Never commit the URL, the key, or a real automation folder id.
+
+**Setup flow (least user work):**
+
+1. The bot creates (or reuses) the routine. The routine panel has three fields: **POST URL**, **key**, and an **Authorization header** field.
+2. The bot gives you deep links to each field, taken from the routine's line in its automation status: `grokbot://app/v1/sidebar?target=webhook-url&automation=<folder id>`, plus `target=webhook-key` and `target=webhook-header`. Fallback: click the bot's name in the chat header (or press Cmd+Shift+I) and pick the routine under **Routines**.
+3. The bot asks for the **key** with a masked secret-request card. The value lands as a box env var (e.g. `SENDPROMPT_WAKE_KEY`); the bot never sees or prints it. You paste the non-secret **URL** in chat.
+4. The bot, or whoever owns the bridge server, writes both into the bridge `.env` with a script that reads the env var (no echo), backs up `.env` first and keeps it out of deploy rsync, and sets `SENDPROMPT_HOLD_MAX_SEC=1800`. Hand-editing `.env` is only a fallback.
+5. Header shape: confirm on first setup, using the routine's Authorization header field, then set `SENDPROMPT_WAKE_HEADER` to match.
 
 | Bridge env | Default | Meaning |
 |---|---|---|
