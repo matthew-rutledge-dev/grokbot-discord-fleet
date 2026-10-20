@@ -53,7 +53,7 @@ Only if the links don't work, give the menu path: click the bot's name in the ch
 ### d. Collect the values (least user work)
 - **Key (default):** ask with a masked secret-request card targeting a box env var such as `SENDPROMPT_WAKE_KEY`. You only verify present or missing; you never see or print the value.
 - **URL:** the user pastes the POST URL in chat. It is not secret unless it embeds a token in its path; then treat it like the key and collect it with a masked card too.
-- **Header:** the Authorization header field shows the shape the routine expects. Header shape: confirm on first setup, then set `SENDPROMPT_WAKE_HEADER` to match. The default is `Authorization`, which sends `Bearer <key>`; any other header name sends the raw key, e.g. `X-Webhook-Key: <key>`.
+- **Header:** the default `SENDPROMPT_WAKE_HEADER=Authorization` (sends `Authorization: Bearer <key>`) is verified against the Grok Bot routine webhook, so leave it unset. It stays configurable: any other header name sends the raw key, e.g. `X-Webhook-Key: <key>`.
 
 ### e. Write the bridge `.env` (no echo)
 The bot (if it can reach the bridge host) or whoever owns the bridge server writes the values with a script that reads the env var, so the key never appears on screen or in logs. For example, on the bridge host with `SENDPROMPT_WAKE_KEY` and `SENDPROMPT_WAKE_URL` exported:
@@ -68,14 +68,15 @@ grep -cE '^SENDPROMPT_WAKE_(URL|KEY)=.+' "$f"   # prints 2; never cat the file
 ```
 
 - **Why in place:** the bridge `.env` is often a single-file bind mount and root-owned/read-only to the container. `mv` would swap in a new inode (the mount keeps pointing at the old file) and reset the owner and mode. `cat > "$f"` rewrites the same inode. `umask 077` keeps `$f.new` private (0600), and `cp -p` keeps the backup's mode. Run it as the file's owner (e.g. root via sudo).
-- Set `SENDPROMPT_HOLD_MAX_SEC=1800` so held messages outlast the wake, and `SENDPROMPT_WAKE_HEADER` if the header shape differs from the default.
+- Set `SENDPROMPT_HOLD_MAX_SEC=1800` so held messages outlast the wake. Leave `SENDPROMPT_WAKE_HEADER` at its verified default.
 - Keep the deploy rules: the runtime `.env` stays out of the rsync, back it up first, compare checksums, and keep it root-owned and read-only where it's bind-mounted. Never run `docker compose config` in shared logs.
 - If the bridge host is remote, send the values over stdin (e.g. ssh), never as command-line arguments.
 - Then recreate the bridge container with `docker compose up -d` (`docker restart` and `docker compose restart` do not re-read `env_file`). Names per bridge 0.2.12 (https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge/pull/9).
 - **Fallback only:** the user copies the URL and key from the routine panel and edits the bridge `.env` by hand.
 
 ### f. Verify (no secrets)
-- Let the box sleep (or stop the tunnel connector), send a Discord message, and confirm: the routine ran once, the tunnel came back, the held message was delivered.
+- Expected wake POST response: HTTP 200 with JSON `{success:true, runUuid}`. Anything else (401/403, 404) means the key, header or URL is wrong.
+- Let the box sleep (or stop the tunnel connector), send a Discord message, and confirm: the bridge got HTTP 200 with JSON `{success:true, runUuid}`, the routine ran once, the tunnel came back, the held message was delivered.
 - Evidence line: routine name + run time + `ensure-sendprompt-tunnel` status line. Never the URL or key.
 
 ## Turn it off
