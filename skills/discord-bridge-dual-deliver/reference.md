@@ -2,7 +2,7 @@
 
 Read this only on a callback error or during setup. The everyday wake path is in `SKILL.md`.
 
-## Wake envelope (legacy `d:` format) in full
+## Legacy wake format (`d:` first line, bridge 0.2.13 and `WAKE_PROMPT_FORMAT=legacy`)
 
 The bridge mints the wake; agents decode it. Three lines, in order:
 
@@ -37,18 +37,66 @@ d:dm:1234567890123456789
 hello from a DM
 ```
 
-### Human wake format (bridge 0.2.14+)
+## Compact wake format (bridge 0.2.14+, default)
 
-Bridge 0.2.14 replaces the raw `d:` line with a readable text line, with routing carried in `sendPrompt` metadata or one compact trailing line; the legacy `d:` format stays available behind a bridge env flag. Both formats are supported once that bridge ships. See the bridge README for the exact format; the delivery contract (`/callback`, headers, body) does not change.
+Bridge flag `WAKE_PROMPT_FORMAT=compact|legacy`, default `compact`. `legacy` is the exact 0.2.13 output above. Agents must parse both. Source of truth: the bridge README section **Inbound wake** and `parseWakeTrailer` in the bridge `src/wake-prompt.ts`.
+
+**Visible header** (first line of the prompt):
+
+- DM: `Discord DM from <label>[ (N attachment[s])]: <text>`
+- Channel: `Discord #<channel>[ (N attachment[s])] from <label>: <text>`
+
+The user text is everything between the header colon and the trailer, and may span lines (it may be empty for attachment-only wakes). `<label>` is for display only; `u` is the authority for who sent it.
+
+**Trailer** (always the LAST line, after the user text):
+
+```text
+trailer = "⟂" SP "d:" slug ":" messageId *( SP key "=" value )
+```
+
+`⟂` is U+27C2; values contain no whitespace. Regex: `^⟂ d:(\S+):(\d+)((?: [a-z]+=\S*)*)$`. A trailer without `u` is not valid.
+
+| Key | Meaning |
+|---|---|
+| `u` | Sender user id (always) — DM callback `userId` |
+| `c` | Channel id (always, even for DMs) — callback `channelId` |
+| `g` | Guild id (guild only; absent means DM) |
+| `map` | Agent alias, percent-encoded — decode only this key |
+| `a` | Discord CDN URL, as-is; repeated in order, max 10 |
+| other | Ignore unknown keys |
+
+Compact drops attachment `filename`, `contentType`, `size` and the `un`/`dn`/`lb` names; infer the type from the URL or the download.
+
+**Mapping:** hop = `d:<slug>:<msgId>`, `replyToMessageId` = `msgId`, `u` → DM `userId`, `c` → `channelId`. Delivery is unchanged: post your own reply to `/callback` with the User-Agent and the env token, never paste the trailer, `d:` line or JSON into Discord, keep the `callback <status> attachments=N` evidence line.
+
+Samples (placeholders only):
+
+```text
+Discord DM from Alice: can you check the build?
+⟂ d:dm:1111111111111111111 u=222222222222222222 c=333333333333333333 map=example-agent
+```
+
+```text
+Discord #general from Bob (1 attachment): what is in this photo?
+⟂ d:general:1111111111111111112 u=444444444444444444 c=555555555555555555 g=666666666666666666 map=example-agent a=https://cdn.example.com/attachments/555555555555555555/777777777777777777/photo.png?ex=1&is=2&hm=abc
+```
+
+Legacy equivalent of the DM sample:
+
+```text
+d:dm:1111111111111111111
+{"id":"d:dm:1111111111111111111","g":null,"u":"222222222222222222","map":"example-agent","un":"alice","dn":"Alice","lb":"Alice","c":"333333333333333333"}
+can you check the build?
+```
 
 ### Decode + absorb
 
-1. If line 1 matches `d:<slug>:<msgId>`, treat it as the hop id.
+1. If the last line matches the compact trailer regex, parse it (compact). Otherwise, if line 1 matches `d:<slug>:<msgId>`, treat it as the hop id (legacy).
 2. Guild: expand `slug` via the operator's channel-map (`slug` → channel / agent binding). DM (`slug` usually `dm`, `g` null): no channel-map row; the agent comes from bridge `security.dm.defaultAgentId`. Prefer thin JSON `map` for alias context.
 3. Keep `msgId` for reply targeting / threading.
-4. Parse `g` / `u` / `un` / `dn` / `lb` / `c` / `map` / `a` into **internal context only**.
-5. Use the human line as the ask; if empty and `a` is present, it is an attachment-only wake. Show inbound images after fetching `a` URLs when the ask needs them.
-6. In the visible Grok chat, show **only** the human content — strip the `d:` line and the JSON. Never re-echo hop fields into chat or Discord.
+4. Parse `g` / `u` / `un` / `dn` / `lb` / `c` / `map` / `a` (legacy JSON or compact trailer keys) into **internal context only**.
+5. Use the human text as the ask (compact: after the header colon, up to the trailer); if empty and `a` is present, it is an attachment-only wake. Show inbound images after fetching `a` URLs when the ask needs them.
+6. In the visible Grok chat, show **only** the human content — strip the `d:` line and the JSON, or the compact header prefix and trailer. Never re-echo hop fields into chat or Discord.
 7. Complete the Discord callback; a Grok-chat reply is optional and never replaces it. If the callback cannot be completed, report the delivery failure rather than treating chat-only output as complete.
 
 ### Guild vs DM
