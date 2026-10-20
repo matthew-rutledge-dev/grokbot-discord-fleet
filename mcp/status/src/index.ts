@@ -66,7 +66,7 @@ const BOT_ENABLE = {
 };
 
 const server = new Server(
-  { name: "discord-fleet-status", version: "0.3.31" },
+  { name: "discord-fleet-status", version: "0.3.32" },
   { capabilities: { tools: {} } },
 );
 
@@ -224,7 +224,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return jsonResult({
         ok,
         plugin: "discord-fleet-status",
-        version: "0.3.31",
+        version: "0.3.32",
         wakesBots: false,
         bridgeRepo: BRIDGE_REPO,
         wakeHostHint: WAKE_HOST_HINT,
