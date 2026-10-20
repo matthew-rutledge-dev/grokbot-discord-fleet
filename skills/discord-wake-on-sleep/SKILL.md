@@ -1,14 +1,18 @@
 ---
 name: discord-wake-on-sleep
-description: use when installer wants Discord messages to wake a hibernated Grok Bot box (bridge wake hook → webhook-triggered routine → ensure sendPrompt tunnel), or when held Discord messages red-X after the bridge hold window
+description: Wake on sleep (recommended) — standard setup step right after bridge + callback setup so Discord messages can wake a sleeping Grok Bot computer (bridge wake hook → webhook-triggered routine → ensure sendPrompt tunnel); also use when held Discord messages red-X after the bridge hold window
 ---
 
-# Discord wake on sleep
+# Discord wake on sleep (recommended)
+
+**Why:** Grok Bot computers sleep a lot when idle, and Discord messages alone can't wake them. Without this step, messages sent while the bot is asleep can fail after the bridge's hold window (shown as a red X in Discord). Run this right after bridge setup and `discord-fleet-callback-setup`. Skipping is allowed but **not recommended**.
 
 ## When to use
 
 - Grok Bot boxes hibernate for hours; while asleep the sendPrompt tunnel is down, the bridge holds the Discord message (default 900 s, `SENDPROMPT_HOLD_MAX_SEC`; 1800 recommended with the wake hook) and then red-Xes it.
-- Operator explicitly asks to set up wake-on-sleep, or asks why Discord messages fail while the box sleeps.
+- As the standard next step after bridge setup and callback setup (offer it; the operator confirms).
+- Operator asks to set up wake-on-sleep, or asks why Discord messages fail while the box sleeps.
+- If the operator declines, note that it's not recommended and that messages sent while asleep can red-X; don't push further.
 
 Operator-driven only. Never run as silent postinstall.
 

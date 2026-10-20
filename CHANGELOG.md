@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.30
+
+- Wake on sleep is now a standard, **recommended** setup step (was "optional"). README install steps, the `discord-fleet-bridge-setup` skill and the `discord-wake-on-sleep` skill put it right after bridge setup and callback setup. The README section is now **Wake on sleep (recommended)** and sits next to the bridge sections instead of at the end.
+- Up-front note: Grok Bot computers sleep a lot when idle and Discord messages alone can't wake them; without this step, messages sent while the bot is asleep can fail after the hold window (red X in Discord). Skipping is allowed but not recommended.
+- Public-repo hygiene: removed operator and host names from an old changelog line.
+- Bump manifests, MCP packages, serverInfo, and Discord User-Agent to `0.3.30`.
+
 ## 0.3.29
 
 - New skill `discord-wake-on-sleep`: one idempotent webhook-triggered routine per Grok Bot account that runs `scripts/ensure-sendprompt-tunnel.sh` on wake and ends quietly; the key comes in through a masked secret card and the bot never sees it. Includes turn-off steps.
@@ -102,7 +109,7 @@
 
 ## 0.3.16
 
-- Scrub remaining personal/portfolio framing for public general use: drop Betty-catalog and rumble/Plug operator shorthand from docs and skills; keep installer-neutral wording.
+- Scrub remaining personal/portfolio framing for public general use: drop operator-specific catalog and host/agent shorthand from docs and skills; keep installer-neutral wording.
 - Bump plugin manifests to `0.3.16`.
 
 
