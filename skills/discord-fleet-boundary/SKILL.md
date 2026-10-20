@@ -19,7 +19,7 @@ Any Discord fleet task: health, channel maps, bindings, wake questions, or "whic
 - Never merge this plugin into a shared general catalog without an explicit maintainer decision.
 - Never deploy to a host or path you do not own from this plugin; use the explicit bridge-setup flow for your own deployment.
 - **Two enable layers, not one flag.** Global `botsEnabled` (default ON; a missing flag means on) is independent of per-site `sites[].enabled` / channel-map `channels[].enabled`. A bridge bot runs for a site only when global is on AND that site is on. Toggling a site does not change the global flag, and changing the global flag does not rewrite site flags. Evaluate with manage MCP `evaluate_bridge_bot_enable` (`bridgeBotRunsForSite`). This plugin does not start or stop bridge processes.
-- **DMs:** optional bridge `security.dm.*` + same `/callback` with DM `channelId`. This plugin has **no** `send_dm` MCP. Guild channel-map does not route DMs; set `defaultAgentId` on the bridge or they deny `dm_no_agent`.
+- **DMs:** optional bridge `security.dm.*` + same `/callback`; DMs send `userId`. This plugin has **no** `send_dm` MCP. Guild channel-map does not route DMs; set `defaultAgentId` on the bridge or they deny `dm_no_agent`.
 - **Media:** optional bridge inbound thin-JSON `a:` (CDN URL refs — fetch promptly) and outbound `/callback` `attachments` or multipart files. This plugin does not own wake or call `/callback`; document for installers' own bridge only. Never put hop codes in Discord replies.
 
 ## What to do
@@ -28,4 +28,4 @@ Any Discord fleet task: health, channel maps, bindings, wake questions, or "whic
 2. Binding / manage / moderation → skill `discord-fleet-manage` + manage MCP (dry-run plans / `confirm=true` Discord REST: inspect, history, post, bot perms, timeout/kick/ban/unban, delete/purge). Still no wake. Ensure README **Discord bot permissions** are granted (role hierarchy for member actions).
 3. Actually waking a bot or editing live map/security → stop here; point at **their** optional self-hosted bridge (skill `discord-fleet-bridge-setup` on explicit ask). Do not invent wake calls from this plugin.
 4. Wake replies / self-callback without host vault → skill `discord-fleet-callback-setup` (file `DISCORD_BRIDGE_CALLBACK_TOKEN` + `DISCORD_BRIDGE_CALLBACK_URL`; per-bot Secrets for multi-agent fleets).
-5. Discord wake inbound / callback hop context → skill `discord-fleet-hop-shorthand` (inbound shape `d:<slug>:<msgId>` — DMs default slug `dm`, `g` may be `null`; thin JSON `{id,g,u,map,a?}`, then human content; never put codes in Discord channel/DM replies; same `/callback` with optional attachments).
+5. Discord wake inbound → skill `discord-bridge-dual-deliver` only (a wake loads no other hop skill; inbound shape `d:<slug>:<msgId>` — DMs default slug `dm`, `g` may be `null`; thin JSON `{id,g,u,map,a?}`, then human content; never put codes in Discord channel/DM replies; same `/callback` with optional attachments).

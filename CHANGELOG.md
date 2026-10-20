@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.31
+
+- New skill `discord-bridge-dual-deliver`: the only skill a Discord wake loads, cut to about 2 KB of wake-path essentials (decode the compact trailer or the legacy `d:<slug>:<msgId>` line + thin JSON, `DISCORD_BRIDGE_CALLBACK_URL` / `DISCORD_BRIDGE_CALLBACK_TOKEN`, required headers incl. a non-default User-Agent, channel `channelId` vs DM `userId` body, short error table). Fewer tokens per Discord reply.
+- Everything else moves to `skills/discord-bridge-dual-deliver/reference.md`, read only on errors or setup: full envelope spec and examples, decode/absorb steps, Guild vs DM routing, attachment contract and MIME allowlist, full error table (adds `content_or_attachment_required`, `user_not_allowlisted`, `dm_open_failed`, `discord_not_ready`, 415), local handler output, encode, hop timing, setup and ops notes.
+- Parses both wake formats: the bridge 0.2.14 compact format (`Discord DM from <label>: <text>` / `Discord #<channel> from <label>: <text>` plus a last-line trailer `⟂ d:<slug>:<msgId> u=… c=… [g=…] [map=…] [a=…]…`, bridge flag `WAKE_PROMPT_FORMAT=compact|legacy`, default compact) and the legacy 0.2.13 `d:` + thin JSON format. Full grammar, key table and samples are in `reference.md`; the callback contract does not change.
+- `discord-fleet-hop-shorthand` is now encode-only (agent-to-agent hop context) and no longer triggers on inbound wakes; its decode, MIME, timing and delivery content moved to the new skill's `reference.md`.
+- Docs: DM callbacks send `userId` and omit `channelId` (README DM section, boundary, bridge-setup); cross-references point at `discord-bridge-dual-deliver`.
+- Bump manifests, MCP packages, serverInfo, and Discord User-Agent to `0.3.31`.
+
 ## 0.3.30
 
 - Wake on sleep is now a standard, **recommended** setup step (was "optional"). README install steps, the `discord-fleet-bridge-setup` skill and the `discord-wake-on-sleep` skill put it right after bridge setup and callback setup. The README section is now **Wake on sleep (recommended)** and sits next to the bridge sections instead of at the end.

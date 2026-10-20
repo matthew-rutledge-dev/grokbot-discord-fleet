@@ -95,5 +95,5 @@ Without per-bot Secrets, self-callback will fail even if the installing host has
 
 - Boundary: skill `discord-fleet-boundary`
 - Bridge bring-up: skill `discord-fleet-bridge-setup` (run callback-setup after the bridge is up)
-- Dual-deliver / hop: skill `discord-fleet-hop-shorthand` (prefer `process.env.DISCORD_BRIDGE_CALLBACK_TOKEN` + `DISCORD_BRIDGE_CALLBACK_URL`)
+- Wake decode / dual-deliver: skill `discord-bridge-dual-deliver` (prefer `process.env.DISCORD_BRIDGE_CALLBACK_TOKEN` + `DISCORD_BRIDGE_CALLBACK_URL`)
 - Bridge SoT: [matthew-rutledge-dev/grok-bot-discord-bridge](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge)
