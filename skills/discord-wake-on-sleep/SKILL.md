@@ -41,7 +41,16 @@ List the account's routines. If a webhook-triggered wake routine already exists,
 
   > Box woke for a held Discord message. Run `bash <plugin-root>/scripts/ensure-sendprompt-tunnel.sh` to bring the sendPrompt tunnel up. Then end quietly — do not message the user.
 
-  `<plugin-root>` is the installed plugin directory (`${GROK_PLUGIN_ROOT}` under Grok, `${CURSOR_PLUGIN_ROOT}` under Cursor); the script is at `scripts/ensure-sendprompt-tunnel.sh` relative to it. Use the absolute path of the install on this box. The plugin's generic `ensure-sendprompt-tunnel.sh` reads `SENDPROMPT_TUNNEL_URL` (plus any other `SENDPROMPT_*` settings) from the routine's environment, e.g. via Bot Secrets. That variable is only a fallback: if your setup's own ensure script already knows its tunnel URL, point the routine at that script instead and leave `SENDPROMPT_TUNNEL_URL` unset.
+  `<plugin-root>` is the installed plugin directory; the script is at `scripts/ensure-sendprompt-tunnel.sh` relative to it. Resolve `<plugin-root>` **once** and put the absolute path into the routine prompt (routines don't expand plugin variables). The Grok Bot desktop app keeps its own plugin copy, separate from `~/.grok/plugins` and the Cursor folder, so don't assume either. On the Grok Bot computer:
+
+  ```bash
+  echo "${GROK_PLUGIN_ROOT:-}"   # if set in this session, use it
+  find / -path '*/grokbot-discord-fleet/scripts/ensure-sendprompt-tunnel.sh' -not -path '*/node_modules/*' 2>/dev/null
+  ```
+
+  If several copies turn up, pick the one whose `plugin.json` `version` matches the installed plugin, and use its directory (minus `/scripts/ensure-sendprompt-tunnel.sh`). Re-resolve after a plugin reinstall moves it.
+
+- **Set `SENDPROMPT_TUNNEL_URL` (required).** `SENDPROMPT_TUNNEL_URL` is **required**: `scripts/ensure-sendprompt-tunnel.sh` exits without it. Set it to the public URL of this computer's sendPrompt tunnel (e.g. `https://sendprompt.example.com/`) as a box env var / Bot Secret so the routine sees it. Also set any other `SENDPROMPT_*` connector settings you use (`SENDPROMPT_CONNECTOR_MATCH`, `SENDPROMPT_SUPERVISOR`; see the README **Durable sendPrompt tunnel** section). Ask for them with a secret card if the URL embeds a token.
 
 ### c. Point the user at the routine fields (deep links first)
 The routine panel shows three fields: the **POST URL**, the **key**, and an **Authorization header** field.
@@ -75,10 +84,12 @@ grep -cE '^SENDPROMPT_WAKE_(URL|KEY)=.+' "$f"   # prints 2; never cat the file
 - Set `SENDPROMPT_HOLD_MAX_SEC=1800` so held messages outlast the wake. Leave `SENDPROMPT_WAKE_HEADER` at its verified default.
 - Keep the deploy rules: the runtime `.env` stays out of the rsync, back it up first, compare checksums, and keep it root-owned and read-only where it's bind-mounted. Never run `docker compose config` in shared logs.
 - If the bridge host is remote, send the values over stdin (e.g. ssh), never as command-line arguments.
-- Then recreate the bridge container with `docker compose up -d` (`docker restart` and `docker compose restart` do not re-read `env_file`). Names per bridge 0.2.12 (https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge/pull/9).
+- Then recreate the bridge container with `docker compose up -d` (`docker restart` and `docker compose restart` do not re-read `env_file`). Requires bridge **>= 0.2.12**; see the bridge README wake section (https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge#sendprompt-wake-hook-optional-0212).
 - **Fallback only:** the user copies the URL and key from the routine panel and edits the bridge `.env` by hand.
 
-### f. Verify (no secrets)
+### f. Verify end to end (no secrets)
+- **DM test:** DM the bot in Discord and confirm a reply arrives.
+- **Sleep test (optional):** let the computer idle or hibernate, send a message, then confirm the wake routine ran and the reply arrived within the hold window (`SENDPROMPT_HOLD_MAX_SEC`).
 - Expected wake POST response: HTTP 200 with JSON `{success:true, runUuid}`. Anything else (401/403, 404) means the key, header or URL is wrong.
 - Let the box sleep (or stop the tunnel connector), send a Discord message, and confirm: the bridge got HTTP 200 with JSON `{success:true, runUuid}`, the routine ran once, the tunnel came back, the held message was delivered.
 - Evidence line: routine name + run time + `ensure-sendprompt-tunnel` status line. Never the URL or key.
