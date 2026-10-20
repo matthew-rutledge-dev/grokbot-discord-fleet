@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.32
+
+- Logo: remove a stray internal design comment from `assets/logo.svg` (no visual change).
+- Bump manifests, MCP packages, serverInfo, and Discord User-Agent to `0.3.32`.
+
 ## 0.3.31
 
 - New skill `discord-bridge-dual-deliver`: the only skill a Discord wake loads, cut to about 2 KB of wake-path essentials (decode the compact trailer or the legacy `d:<slug>:<msgId>` line + thin JSON, `DISCORD_BRIDGE_CALLBACK_URL` / `DISCORD_BRIDGE_CALLBACK_TOKEN`, required headers incl. a non-default User-Agent, channel `channelId` vs DM `userId` body, short error table). Fewer tokens per Discord reply.
