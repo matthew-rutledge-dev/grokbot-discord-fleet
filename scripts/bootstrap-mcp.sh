@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install MCP package deps for first-time clone / local plugin install.
+# Install MCP package deps and build the server for first-time clone / local plugin install.
 # Required before the discord-fleet MCP server can start (one package: mcp/discord-fleet).
 #
 # Linux / macOS / Git Bash (Windows):
@@ -44,4 +44,11 @@ if [[ ! -f "$dir/package.json" ]]; then
 fi
 echo "bootstrap-mcp: npm ci in mcp/$pkg"
 (cd "$dir" && "$NPM" ci)
+# MCP configs launch dist/index.js by absolute path, so build it here.
+echo "bootstrap-mcp: npm run build in mcp/$pkg"
+(cd "$dir" && "$NPM" run build)
+if [[ ! -f "$dir/dist/index.js" ]]; then
+  echo "bootstrap-mcp: build did not produce $dir/dist/index.js" >&2
+  exit 1
+fi
 echo "bootstrap-mcp: done"

@@ -16,11 +16,11 @@ Planning channel bindings or running confirm-gated Discord REST manage actions (
 3. Call MCP server `discord-fleet` (one server for status + manage; older installs called it `discord-fleet-manage`, same tool names). If `DISCORD_FLEET_READ_ONLY` is on, the write tools (`post_channel_message`, `timeout_member`, `kick_member`, `ban_member`, `unban_member`, `delete_message`, `purge_channel_messages`) are hidden and refused; say so instead of retrying, and the operator can unset it and reload MCP servers. `describe_manage_boundary` reports `readOnly`.
    - `describe_manage_boundary` — refresh: this plugin does not wake bots / call sendPrompt; lists tool policy.
    - `plan_channel_binding` — optional `agentAlias` / `agentId` / `channelId` / `label` / `requireMention`; returns a dry-run draft map row. No Discord API calls.
-   - `inspect_guild` — Discord REST snapshot; **requires `confirm=true`** and `DISCORD_BOT_TOKEN`.
-   - `resolve_channel` — Discord REST channel lookup; **requires `confirm=true`** and token.
-   - `list_channel_messages` — recent messages (limit max 50); **requires `confirm=true`**.
+   - `inspect_guild` — Discord REST snapshot; read-only, no confirm needed; needs `DISCORD_BOT_TOKEN`.
+   - `resolve_channel` — Discord REST channel lookup; read-only, no confirm needed; needs token.
+   - `list_channel_messages` — recent messages (limit max 50); read-only, no confirm needed.
    - `post_channel_message` — create message; dry-run preview without `confirm=true`; **confirm=true** to send; refuses empty content; returns message id. Not bridge `/callback`.
-   - `check_bot_channel_permissions` — bot View/Send/History/Manage Messages (+ Kick/Ban/Moderate from guild roles); **requires `confirm=true`**.
+   - `check_bot_channel_permissions` — bot View/Send/History/Manage Messages (+ Kick/Ban/Moderate from guild roles); read-only, no confirm needed.
    - `timeout_member` — `guildId`, `userId`, `durationSeconds` (0 clears), optional `reason`; dry-run without confirm; **confirm=true** to apply.
    - `kick_member` / `ban_member` / `unban_member` — `guildId`, `userId`, optional `reason` (`ban_member` also `deleteMessageSeconds`); dry-run without confirm.
    - `delete_message` — `channelId`, `messageId`; dry-run without confirm.
@@ -31,5 +31,5 @@ Planning channel bindings or running confirm-gated Discord REST manage actions (
 
 ## Evidence expected
 
-- Dry-run plan JSON from `plan_channel_binding`, and/or gated tool JSON with `confirm: true` (or `dryRun: true` for unconfirmed writes)
+- Dry-run plan JSON from `plan_channel_binding`, and/or read tool JSON, and/or write tool JSON with `confirm: true` (or `dryRun: true` for unconfirmed writes)
 - Explicit boundary language (`wake: false` / `discordWrites` accurate / no sendPrompt)

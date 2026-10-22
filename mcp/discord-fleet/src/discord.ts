@@ -3,6 +3,7 @@
  * Gated reads + confirm-gated writes (post / moderation). No wake / sendPrompt.
  */
 const API = "https://discord.com/api/v10";
+import { readEnv } from "./env.js";
 import { VERSION } from "./version.js";
 
 const API_UA_URL = "https://github.com/matthew-rutledge-dev/grokbot-discord-fleet";
@@ -20,7 +21,7 @@ export class DiscordApiError extends Error {
 }
 
 export function requireBotToken(): string {
-  const token = process.env.DISCORD_BOT_TOKEN?.trim();
+  const token = readEnv("DISCORD_BOT_TOKEN");
   if (!token) {
     throw new Error(
       "DISCORD_BOT_TOKEN is not set. Set it via plugin variables or your host vault/runtime environment. Never commit tokens.",
@@ -30,7 +31,7 @@ export function requireBotToken(): string {
 }
 
 export function hasBotToken(): boolean {
-  return Boolean(process.env.DISCORD_BOT_TOKEN?.trim());
+  return readEnv("DISCORD_BOT_TOKEN") !== undefined;
 }
 
 async function discordRequest<T = unknown>(

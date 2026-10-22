@@ -58,3 +58,16 @@ test("parseReadOnly accepts 1/true/yes/on only", () => {
   for (const v of [undefined, "", "0", "false", "no", "off", "${DISCORD_FLEET_READ_ONLY}"])
     assert.equal(parseReadOnly(v as string | undefined), false, String(v));
 });
+
+test("read tools never require confirm; write tools keep confirm", () => {
+  for (const name of READ_TOOLS) {
+    const tool = ALL_TOOLS.find((t) => t.name === name)!;
+    const required = (tool.inputSchema as { required?: string[] }).required ?? [];
+    assert.ok(!required.includes("confirm"), `${name} must not require confirm`);
+  }
+  for (const name of WRITE_TOOLS) {
+    const tool = ALL_TOOLS.find((t) => t.name === name)!;
+    const props = (tool.inputSchema as { properties?: Record<string, unknown> }).properties ?? {};
+    assert.ok("confirm" in props, `${name} keeps a confirm argument`);
+  }
+});

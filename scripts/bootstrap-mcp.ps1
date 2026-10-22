@@ -1,4 +1,4 @@
-# Install MCP package deps for first-time clone / local plugin install (Windows PowerShell).
+# Install MCP package deps and build the server for first-time clone / local plugin install (Windows PowerShell).
 # Required before the discord-fleet MCP server can start (one package: mcp/discord-fleet).
 #
 # Usage (from plugin root or anywhere):
@@ -45,6 +45,17 @@ try {
   & $npmExe ci
   if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
+  }
+  # MCP configs launch dist/index.js by absolute path, so build it here.
+  Write-Host "bootstrap-mcp: npm run build in mcp/$pkg"
+  & $npmExe run build
+  if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+  }
+  $entry = Join-Path $dir 'dist\index.js'
+  if (-not (Test-Path -LiteralPath $entry)) {
+    Write-Error "bootstrap-mcp: build did not produce $entry"
+    exit 1
   }
 } finally {
   Pop-Location

@@ -3,8 +3,7 @@
     "discord-fleet": {
       "command": "node",
       "args": [
-        "./node_modules/tsx/dist/cli.mjs",
-        "src/index.ts"
+        "${CURSOR_PLUGIN_ROOT}/mcp/discord-fleet/dist/index.js"
       ],
       "cwd": "${CURSOR_PLUGIN_ROOT}/mcp/discord-fleet",
       "env": {

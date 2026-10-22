@@ -8,6 +8,11 @@
 - Bootstrap scripts (`bootstrap-mcp.sh`, `bootstrap-mcp.ps1`) install the one package. Upgrading: run bootstrap once, then reload MCP servers or restart the host so it drops the two old servers.
 - README (layout, install, handshake troubleshooting, variables table, new **Read-only mode** section, tool list), skills (`discord-fleet-status`, `discord-fleet-manage`, `discord-fleet-boundary`, `discord-fleet-bridge-setup`), manifest descriptions + keywords updated.
 - Bump manifests, MCP package, serverInfo, and Discord User-Agent to `0.3.33`.
+- Fixes from a live Grok Build test on Windows (still 0.3.33):
+  - **Launch no longer depends on `cwd`.** Grok Build ignores the MCP `cwd` field, so the old cwd-relative `./node_modules/tsx/dist/cli.mjs src/index.ts` failed with `Cannot find module`. Both MCP configs now run `node <plugin-root>/mcp/discord-fleet/dist/index.js` with an absolute path (`${GROK_PLUGIN_ROOT}` in `.mcp.json`, `${CURSOR_PLUGIN_ROOT}` in `mcp.json`). Both bootstrap scripts now run `npm run build` after `npm ci` and check that `dist/index.js` exists. `typescript` / `@types/node` moved to `dependencies` so the build also works with `--omit=dev`.
+  - **Unexpanded placeholders are treated as unset.** Hosts can pass unset variables through literally (e.g. `DISCORD_GUILD_ID=${DISCORD_GUILD_ID}`), which sent the placeholder to Discord and got HTTP 400 "not snowflake" from `inspect_guild`. One env reader now treats empty values and any value matching `^\$\{[^}]*\}$` as unset, for the token, guild id, bridge health URL and `DISCORD_FLEET_READ_ONLY` (a literal placeholder reads as off).
+  - **Read tools no longer need `confirm`.** `inspect_guild`, `resolve_channel`, `list_channel_messages` and `check_bot_channel_permissions` dropped their `confirm=true` requirement (the argument is still accepted and ignored). All 9 read tools run without confirm; all 7 write tools still need `confirm=true`.
+  - Tests: env-reader unit tests (incl. placeholder `DISCORD_FLEET_READ_ONLY` = off), a schema audit (no read tool requires confirm; every write tool keeps it), and stdio tests that start `dist/index.js` by absolute path from a neutral cwd with literal `${...}` env values. `npm test` builds first.
 
 ## 0.3.32
 

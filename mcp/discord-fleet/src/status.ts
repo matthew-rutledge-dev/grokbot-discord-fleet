@@ -15,6 +15,7 @@ import {
   type DiscordUser,
 } from "./discord.js";
 import { jsonResult, type ToolResult } from "./result.js";
+import { readEnv } from "./env.js";
 import { VERSION } from "./version.js";
 
 const BRIDGE_REPO = "matthew-rutledge-dev/grok-bot-discord-bridge";
@@ -63,7 +64,7 @@ const BOT_ENABLE = {
 };
 
 function bridgeHealthUrl(): string | undefined {
-  const explicit = process.env.DISCORD_BRIDGE_HEALTH_URL?.trim();
+  const explicit = readEnv("DISCORD_BRIDGE_HEALTH_URL");
   if (explicit) return explicit;
   return undefined;
 }
@@ -221,7 +222,7 @@ export async function handleStatusTool(
       envHints: {
         DISCORD_BOT_TOKEN: hasBotToken() ? "set" : "missing",
         DISCORD_BRIDGE_HEALTH_URL: healthUrl ? "set" : "missing",
-        DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID?.trim()
+        DISCORD_GUILD_ID: readEnv("DISCORD_GUILD_ID")
           ? "set"
           : "missing",
       },
@@ -231,7 +232,7 @@ export async function handleStatusTool(
   if (name === "list_channel_map") {
     const guildId =
       (typeof args.guildId === "string" && args.guildId.trim()) ||
-      process.env.DISCORD_GUILD_ID?.trim() ||
+      readEnv("DISCORD_GUILD_ID") ||
       null;
 
     const body: Record<string, unknown> = {

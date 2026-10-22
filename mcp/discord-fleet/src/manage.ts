@@ -1,6 +1,6 @@
 /**
  * Manage tools (formerly the discord-fleet-manage server): boundary docs,
- * dry-run plans, confirm-gated Discord REST reads and confirm-gated writes
+ * dry-run plans, Discord REST reads (no confirm) and confirm-gated writes
  * (post / moderation). No wake / sendPrompt. Bridge channel-map /
  * security.json writes are NOT implemented here. Token from env only.
  */
@@ -38,6 +38,7 @@ import {
   setSiteEnabled,
 } from "./bot-enable.js";
 import { jsonResult, type ToolResult } from "./result.js";
+import { readEnv } from "./env.js";
 import { SERVER_NAME, VERSION } from "./version.js";
 import { readOnlyFromEnv } from "./readonly.js";
 
@@ -49,11 +50,6 @@ const PURGE_LIMIT_MAX = 100;
 const CONTENT_PREVIEW_MAX = 500;
 const TIMEOUT_MAX_SECONDS = 28 * 24 * 60 * 60; // Discord max ~28 days
 const DELETE_MESSAGE_SECONDS_MAX = 604800; // Discord ban delete_message_seconds max 7d
-
-function requireConfirm(args: Record<string, unknown>, tool: string): string | null {
-  if (args.confirm === true) return null;
-  return `Refused: ${tool} requires confirm=true (explicit confirmation). No Discord call made.`;
-}
 
 function truncate(s: string, max: number): string {
   if (s.length <= max) return s;
@@ -71,7 +67,7 @@ function optionalReason(args: Record<string, unknown>): string | undefined {
 function resolveGuildId(args: Record<string, unknown>): string | null {
   return (
     (typeof args.guildId === "string" && args.guildId.trim()) ||
-    process.env.DISCORD_GUILD_ID?.trim() ||
+    readEnv("DISCORD_GUILD_ID") ||
     null
   );
 }
@@ -80,7 +76,7 @@ export const MANAGE_TOOLS: Tool[] = [
   {
     name: "describe_manage_boundary",
     description:
-      "Explains manage/status vs wake: this plugin does NOT wake bots or call sendPrompt. Lists confirm-gated Discord REST tools (inspect, history, post, moderation) and whether read-only mode (DISCORD_FLEET_READ_ONLY) is on.",
+      "Explains manage/status vs wake: this plugin does NOT wake bots or call sendPrompt. Lists Discord REST read tools (no confirm) and confirm-gated write tools (post, moderation), and whether read-only mode (DISCORD_FLEET_READ_ONLY) is on.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
   },
   {
@@ -117,7 +113,7 @@ export const MANAGE_TOOLS: Tool[] = [
   {
     name: "inspect_guild",
     description:
-      "Non-destructive Discord REST snapshot: guild metadata, roles, and channels. Requires confirm=true. Needs DISCORD_BOT_TOKEN.",
+      "Non-destructive Discord REST snapshot: guild metadata, roles, and channels. No confirm needed (read-only). Needs DISCORD_BOT_TOKEN.",
     inputSchema: {
       type: "object",
       properties: {
@@ -128,17 +124,17 @@ export const MANAGE_TOOLS: Tool[] = [
         },
         confirm: {
           type: "boolean",
-          description: "Must be true to run the Discord REST reads",
+          description:
+              "Optional and ignored (read-only tool; no confirm needed). Accepted so older callers that pass confirm=true keep working.",
         },
       },
-      required: ["confirm"],
       additionalProperties: false,
     },
   },
   {
     name: "resolve_channel",
     description:
-      "Non-destructive Discord REST GET /channels/{id}. Requires confirm=true. Needs DISCORD_BOT_TOKEN.",
+      "Non-destructive Discord REST GET /channels/{id}. No confirm needed (read-only). Needs DISCORD_BOT_TOKEN.",
     inputSchema: {
       type: "object",
       properties: {
@@ -148,17 +144,18 @@ export const MANAGE_TOOLS: Tool[] = [
         },
         confirm: {
           type: "boolean",
-          description: "Must be true to run the Discord REST read",
+          description:
+              "Optional and ignored (read-only tool; no confirm needed). Accepted so older callers that pass confirm=true keep working.",
         },
       },
-      required: ["channelId", "confirm"],
+      required: ["channelId"],
       additionalProperties: false,
     },
   },
   {
     name: "list_channel_messages",
     description:
-      "Read-only Discord REST GET /channels/{id}/messages (last N, max 50). Requires confirm=true. Needs DISCORD_BOT_TOKEN. Not wake.",
+      "Read-only Discord REST GET /channels/{id}/messages (last N, max 50). No confirm needed (read-only). Needs DISCORD_BOT_TOKEN. Not wake.",
     inputSchema: {
       type: "object",
       properties: {
@@ -172,10 +169,11 @@ export const MANAGE_TOOLS: Tool[] = [
         },
         confirm: {
           type: "boolean",
-          description: "Must be true to run the Discord REST read",
+          description:
+              "Optional and ignored (read-only tool; no confirm needed). Accepted so older callers that pass confirm=true keep working.",
         },
       },
-      required: ["channelId", "confirm"],
+      required: ["channelId"],
       additionalProperties: false,
     },
   },
@@ -207,7 +205,7 @@ export const MANAGE_TOOLS: Tool[] = [
   {
     name: "check_bot_channel_permissions",
     description:
-      "Confirm-gated check of the bot's effective permissions in a channel (VIEW/SEND/HISTORY/MANAGE_MESSAGES + guild Kick/Ban/Moderate when computable). Requires confirm=true. Needs DISCORD_BOT_TOKEN.",
+      "Read-only check of the bot's effective permissions in a channel (VIEW/SEND/HISTORY/MANAGE_MESSAGES + guild Kick/Ban/Moderate when computable). No confirm needed (read-only). Needs DISCORD_BOT_TOKEN.",
     inputSchema: {
       type: "object",
       properties: {
@@ -222,10 +220,11 @@ export const MANAGE_TOOLS: Tool[] = [
         },
         confirm: {
           type: "boolean",
-          description: "Must be true to run Discord REST reads",
+          description:
+              "Optional and ignored (read-only tool; no confirm needed). Accepted so older callers that pass confirm=true keep working.",
         },
       },
-      required: ["channelId", "confirm"],
+      required: ["channelId"],
       additionalProperties: false,
     },
   },
@@ -487,14 +486,14 @@ export async function handleManageTool(
       },
       managePolicy: {
         plan_channel_binding: "dry-run only",
-        inspect_guild: "read-only Discord REST; requires confirm=true",
-        resolve_channel: "read-only Discord REST; requires confirm=true",
+        inspect_guild: "read-only Discord REST; no confirm needed",
+        resolve_channel: "read-only Discord REST; no confirm needed",
         list_channel_messages:
-          "read-only Discord REST message history; requires confirm=true; limit capped at 50",
+          "read-only Discord REST message history; no confirm needed; limit capped at 50",
         post_channel_message:
           "confirm-gated Discord REST create message; dry-run preview without confirm=true; refuses empty content",
         check_bot_channel_permissions:
-          "read-only computed bot channel/guild permissions; requires confirm=true",
+          "read-only computed bot channel/guild permissions; no confirm needed",
         timeout_member:
           "confirm-gated Moderate Members timeout; durationSeconds=0 clears; dry-run without confirm=true",
         kick_member:
@@ -567,8 +566,8 @@ export async function handleManageTool(
       },
       steps: [
         "Confirm guild is allowlisted in bridge config/security.json",
-        "Confirm channel exists (use resolve_channel with confirm=true if needed)",
-        "Optionally check_bot_channel_permissions (confirm=true) for View/Send/History (+ mod flags)",
+        "Confirm channel exists (use resolve_channel if needed)",
+        "Optionally check_bot_channel_permissions for View/Send/History (+ mod flags)",
         "Pick a real Grok Bot agentId (empty agentId stays deny)",
         "On bridge host only: add/edit config/channel-map.json row; leave the per-site enabled=false until ready",
         "Do not treat the row enabled flag as the global botsEnabled toggle — the two stores are independent (global defaults on when omitted)",
@@ -582,10 +581,7 @@ export async function handleManageTool(
   }
 
   if (name === "inspect_guild") {
-    const refused = requireConfirm(args, "inspect_guild");
-    if (refused) return jsonResult({ ok: false, error: refused }, true);
-
-    const guildId = resolveGuildId(args);
+      const guildId = resolveGuildId(args);
     if (!guildId) {
       return jsonResult(
         {
@@ -606,7 +602,6 @@ export async function handleManageTool(
 
     return jsonResult({
       ok: true,
-      confirm: true,
       destructive: false,
       discordWrites: false,
       guild: {
@@ -642,10 +637,7 @@ export async function handleManageTool(
   }
 
   if (name === "resolve_channel") {
-    const refused = requireConfirm(args, "resolve_channel");
-    if (refused) return jsonResult({ ok: false, error: refused }, true);
-
-    const channelId = asTrimmedString(args.channelId);
+      const channelId = asTrimmedString(args.channelId);
     if (!channelId) {
       return jsonResult(
         { ok: false, error: "channelId is required" },
@@ -661,7 +653,6 @@ export async function handleManageTool(
 
     return jsonResult({
       ok: true,
-      confirm: true,
       destructive: false,
       discordWrites: false,
       channel: {
@@ -678,10 +669,7 @@ export async function handleManageTool(
   }
 
   if (name === "list_channel_messages") {
-    const refused = requireConfirm(args, "list_channel_messages");
-    if (refused) return jsonResult({ ok: false, error: refused }, true);
-
-    const channelId = asTrimmedString(args.channelId);
+      const channelId = asTrimmedString(args.channelId);
     if (!channelId) {
       return jsonResult(
         { ok: false, error: "channelId is required" },
@@ -704,7 +692,6 @@ export async function handleManageTool(
 
     return jsonResult({
       ok: true,
-      confirm: true,
       destructive: false,
       discordWrites: false,
       channelId,
@@ -796,10 +783,7 @@ export async function handleManageTool(
   }
 
   if (name === "check_bot_channel_permissions") {
-    const refused = requireConfirm(args, "check_bot_channel_permissions");
-    if (refused) return jsonResult({ ok: false, error: refused }, true);
-
-    const channelId = asTrimmedString(args.channelId);
+      const channelId = asTrimmedString(args.channelId);
     if (!channelId) {
       return jsonResult(
         { ok: false, error: "channelId is required" },
@@ -816,7 +800,7 @@ export async function handleManageTool(
     const guildId =
       (typeof args.guildId === "string" && args.guildId.trim()) ||
       channel.guild_id ||
-      process.env.DISCORD_GUILD_ID?.trim() ||
+      readEnv("DISCORD_GUILD_ID") ||
       null;
 
     if (!guildId || channel.type === 1 || channel.type === 3) {
@@ -830,7 +814,6 @@ export async function handleManageTool(
       );
       return jsonResult({
         ok: true,
-        confirm: true,
         destructive: false,
         discordWrites: false,
         channel: {
@@ -887,7 +870,6 @@ export async function handleManageTool(
 
     return jsonResult({
       ok: true,
-      confirm: true,
       destructive: false,
       discordWrites: false,
       channel: {

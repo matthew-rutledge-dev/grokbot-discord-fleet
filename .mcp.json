@@ -3,8 +3,7 @@
     "discord-fleet": {
       "command": "node",
       "args": [
-        "./node_modules/tsx/dist/cli.mjs",
-        "src/index.ts"
+        "${GROK_PLUGIN_ROOT}/mcp/discord-fleet/dist/index.js"
       ],
       "cwd": "${GROK_PLUGIN_ROOT}/mcp/discord-fleet",
       "env": {
