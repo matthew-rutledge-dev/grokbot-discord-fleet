@@ -1,6 +1,6 @@
 /**
  * Minimal Discord REST helpers (status + manage). Token from env only — never hardcoded.
- * Gated reads + confirm-gated writes (post / moderation). No wake / sendPrompt.
+ * Reads (no confirm) + confirm-gated writes (post / moderation). No wake / sendPrompt.
  */
 const API = "https://discord.com/api/v10";
 import { readEnv } from "./env.js";

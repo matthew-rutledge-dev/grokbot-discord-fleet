@@ -2,8 +2,9 @@
 /**
  * discord-fleet MCP — one server for Discord fleet status + manage.
  * Status: optional bridge /healthz + Discord REST reads.
- * Manage: boundary docs, dry-run plans, confirm-gated Discord REST reads and
- * writes (post / moderation). DISCORD_FLEET_READ_ONLY=1 hides write tools.
+ * Manage: boundary docs, dry-run plans, Discord REST reads (no confirm) and
+ * confirm-gated writes (post / moderation). DISCORD_FLEET_READ_ONLY=1 hides
+ * write tools (fails closed: unrecognised non-empty values also mean on).
  * Not on the wake path: no sendPrompt, no gateway, no bridge /callback.
  * Token from env only.
  */
@@ -21,11 +22,12 @@ import {
   READ_ONLY_ENV,
   isWriteTool,
   listTools,
-  readOnlyFromEnv,
+  readOnlyResolutionFromEnv,
 } from "./tools.js";
 import { SERVER_NAME, VERSION } from "./version.js";
 
-export function createServer(readOnly = readOnlyFromEnv()): Server {
+/** readOnly is resolved once at start; every handler uses this value. */
+export function createServer(readOnly: boolean): Server {
   const server = new Server(
     { name: SERVER_NAME, version: VERSION },
     { capabilities: { tools: {} } },
@@ -53,7 +55,7 @@ export function createServer(readOnly = readOnlyFromEnv()): Server {
     try {
       const result =
         (await handleStatusTool(name, args)) ??
-        (await handleManageTool(name, args));
+        (await handleManageTool(name, args, { readOnly }));
       if (result) return result;
       return jsonResult({ error: `Unknown tool: ${name}` }, true);
     } catch (err) {
@@ -72,8 +74,10 @@ export function createServer(readOnly = readOnlyFromEnv()): Server {
 }
 
 async function main() {
+  const { readOnly, warning } = readOnlyResolutionFromEnv();
+  if (warning) console.error(warning);
   const transport = new StdioServerTransport();
-  await createServer().connect(transport);
+  await createServer(readOnly).connect(transport);
 }
 
 main().catch((err) => {

@@ -55,9 +55,11 @@ async function connect(extraEnv: Record<string, string>) {
     env,
     stderr: "pipe",
   });
+  let stderr = "";
+  transport.stderr?.on("data", (d: Buffer) => (stderr += d.toString()));
   const client = new Client({ name: "discord-fleet-test", version: "0.0.0" });
   await client.connect(transport);
-  return client;
+  return Object.assign(client, { stderrText: () => stderr });
 }
 
 function textOf(res: unknown): Record<string, unknown> {
@@ -133,6 +135,33 @@ test("stdio: DISCORD_FLEET_READ_ONLY=1 hides and refuses write tools", async () 
     });
     assert.equal((res as { isError?: boolean }).isError, true);
     assert.equal(textOf(res).readOnly, true);
+  } finally {
+    await client.close();
+  }
+});
+
+test("stdio: unrecognised DISCORD_FLEET_READ_ONLY fails closed with one stderr warning", async () => {
+  const client = await connect({ DISCORD_FLEET_READ_ONLY: "enabled" });
+  try {
+    const { tools } = await client.listTools();
+    assert.deepEqual(tools.map((t) => t.name).sort(), [...READ_TOOLS].sort());
+    const boundary = textOf(
+      await client.callTool({ name: "describe_manage_boundary", arguments: {} }),
+    );
+    assert.equal(boundary.readOnly, true, "boundary reports the server's resolved value");
+    const warnings = client.stderrText().split("\n").filter((l) => /not a recognised value/.test(l));
+    assert.equal(warnings.length, 1, client.stderrText());
+  } finally {
+    await client.close();
+  }
+});
+
+test("stdio: explicit off value lists all tools with no warning", async () => {
+  const client = await connect({ DISCORD_FLEET_READ_ONLY: "off" });
+  try {
+    const { tools } = await client.listTools();
+    assert.equal(tools.length, 16);
+    assert.equal(client.stderrText().trim(), "");
   } finally {
     await client.close();
   }

@@ -10,7 +10,13 @@ import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { MANAGE_TOOLS } from "./manage.js";
 import { STATUS_TOOLS } from "./status.js";
 
-export { READ_ONLY_ENV, parseReadOnly, readOnlyFromEnv } from "./readonly.js";
+export {
+  READ_ONLY_ENV,
+  parseReadOnly,
+  readOnlyFromEnv,
+  readOnlyResolutionFromEnv,
+  resolveReadOnly,
+} from "./readonly.js";
 
 /** Tools that can change Discord state when called with confirm=true. */
 export const WRITE_TOOL_NAMES: ReadonlySet<string> = new Set([

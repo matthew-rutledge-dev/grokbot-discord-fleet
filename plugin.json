@@ -58,7 +58,7 @@
       "DISCORD_FLEET_READ_ONLY": {
         "type": "string",
         "title": "Read-only mode",
-        "description": "Optional. Set to 1 (or true/yes/on) to hide every Discord write/moderation tool (post, timeout, kick, ban, unban, delete, purge) from the discord-fleet MCP server. Leave empty for all tools; write tools still need confirm=true."
+        "description": "Optional. Set to 1 (or true/yes/on) to hide every Discord write/moderation tool (post, timeout, kick, ban, unban, delete, purge) from the discord-fleet MCP server. Unset, empty, 0, false, no or off = all tools. Any other value also turns read-only ON (fails closed, with a warning). Read tools stay available; write tools always need confirm=true."
       }
     },
     "required": [

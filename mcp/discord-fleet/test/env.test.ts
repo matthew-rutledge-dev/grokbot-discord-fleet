@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { isUnsetValue, readEnv } from "../src/env.js";
-import { readOnlyFromEnv } from "../src/readonly.js";
+import { readOnlyFromEnv, resolveReadOnly } from "../src/readonly.js";
 
 test("readEnv treats empty and literal ${...} placeholders as unset", () => {
   const env = {
@@ -46,4 +46,24 @@ test("token and guild placeholders read as unset in process env", async () => {
   } finally {
     process.env = saved;
   }
+});
+
+test("read-only fails closed on unrecognised values, with one warning", () => {
+  for (const v of ["enabled", "2", "readonly", "y"]) {
+    const r = resolveReadOnly(v);
+    assert.equal(r.readOnly, true, v);
+    assert.ok(r.warning && /not a recognised value; treating it as ON/.test(r.warning), v);
+  }
+  for (const v of ["1", "true", "yes", "on", "ON"]) {
+    const r = resolveReadOnly(v);
+    assert.deepEqual(r, { readOnly: true }, v);
+  }
+  for (const v of ["0", "false", "no", "off", "OFF", "", "  ", undefined]) {
+    const r = resolveReadOnly(v);
+    assert.deepEqual(r, { readOnly: false }, String(v));
+  }
+  assert.equal(readOnlyFromEnv({ DISCORD_FLEET_READ_ONLY: "enabled" }), true);
+  assert.equal(readOnlyFromEnv({ DISCORD_FLEET_READ_ONLY: "2" }), true);
+  assert.equal(readOnlyFromEnv({ DISCORD_FLEET_READ_ONLY: "off" }), false);
+  assert.equal(readOnlyFromEnv({ DISCORD_FLEET_READ_ONLY: "${DISCORD_FLEET_READ_ONLY}" }), false);
 });

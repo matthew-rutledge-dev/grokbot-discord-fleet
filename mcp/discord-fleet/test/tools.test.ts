@@ -53,9 +53,10 @@ test("write tool set matches the confirm-gated writers", () => {
   }
 });
 
-test("parseReadOnly accepts 1/true/yes/on only", () => {
-  for (const v of ["1", "true", "TRUE", " yes ", "on"]) assert.equal(parseReadOnly(v), true, v);
-  for (const v of [undefined, "", "0", "false", "no", "off", "${DISCORD_FLEET_READ_ONLY}"])
+test("parseReadOnly fails closed: only unset/empty/off values are off", () => {
+  for (const v of ["1", "true", "TRUE", " yes ", "on", "enabled", "2", "readonly"])
+    assert.equal(parseReadOnly(v), true, v);
+  for (const v of [undefined, "", "  ", "0", "false", "FALSE", " no ", "off", "Off"])
     assert.equal(parseReadOnly(v as string | undefined), false, String(v));
 });
 
