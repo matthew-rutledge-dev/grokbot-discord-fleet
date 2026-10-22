@@ -1,0 +1,285 @@
+/**
+ * Status tools (formerly the discord-fleet-status server): optional bridge
+ * /healthz probe + Discord REST reads. Read-only. Not on the wake path.
+ * No sendPrompt. Token from env only.
+ */
+import type { Tool } from "@modelcontextprotocol/sdk/types.js";
+import {
+  channelTypeName,
+  discordGet,
+  DiscordApiError,
+  hasBotToken,
+  requireBotToken,
+  type DiscordChannel,
+  type DiscordGuildPartial,
+  type DiscordUser,
+} from "./discord.js";
+import { jsonResult, type ToolResult } from "./result.js";
+import { readEnv } from "./env.js";
+import { VERSION } from "./version.js";
+
+const BRIDGE_REPO = "matthew-rutledge-dev/grok-bot-discord-bridge";
+const WAKE_HOST_HINT =
+  "Use your own host and deploy path for optional bridge setup; do not deploy from this plugin";
+
+/** Documented channel-map schema (SoT lives on bridge host, not in this plugin). */
+const CHANNEL_MAP_SCHEMA = {
+  version: 1,
+  /**
+   * Global bridge-bot on/off. Independent of channels[].enabled.
+   * Omit this field to mean ON (default). Does not rewrite per-site flags.
+   */
+  botsEnabled: true as boolean,
+  defaultSendPromptUrl: null as string | null,
+  channels: [
+    {
+      /** Per-site on/off. Not owned by botsEnabled. */
+      enabled: false,
+      channelId: "<snowflake>",
+      label: "optional",
+      agentId: "<agent-uuid>",
+      sendPromptUrl: null as string | null,
+      requireMention: false,
+      /** Optional. "local" skips sendPrompt when wake_agent is false and a handler is set. */
+      primary_llm: "local",
+      wake_agent: false,
+      handler: "example-handler",
+      local_handler: "example-local-handler",
+      /** Optional runner. Example only. Real profile names stay in the operator roster, not this plugin. */
+      harness: "grok-build",
+      profile: "example-profile",
+    },
+  ],
+};
+
+const BOT_ENABLE = {
+  layers: 2,
+  globalKey: "botsEnabled",
+  siteKey: "channels[].enabled",
+  defaultGlobal: "on",
+  missingGlobalMeans: "on",
+  runsWhen: "botsEnabled is on (default) AND that channel/site enabled is true",
+  storesIndependent: true,
+  evaluateWith: "discord-fleet evaluate_bridge_bot_enable / bridgeBotRunsForSite",
+};
+
+function bridgeHealthUrl(): string | undefined {
+  const explicit = readEnv("DISCORD_BRIDGE_HEALTH_URL");
+  if (explicit) return explicit;
+  return undefined;
+}
+
+async function probeBridgeHealth(url: string): Promise<{
+  reachable: boolean;
+  url: string;
+  statusCode?: number;
+  body?: unknown;
+  error?: string;
+}> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(url, {
+      method: "GET",
+      signal: controller.signal,
+      headers: { Accept: "application/json" },
+    });
+    clearTimeout(timer);
+    const text = await res.text();
+    let body: unknown = text;
+    try {
+      body = text ? JSON.parse(text) : null;
+    } catch {
+      /* keep raw */
+    }
+    return {
+      reachable: res.ok,
+      url,
+      statusCode: res.status,
+      body,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { reachable: false, url, error: msg };
+  }
+}
+
+async function discordIdentity(token: string) {
+  const me = await discordGet<DiscordUser>("/users/@me", token);
+  const guilds = await discordGet<DiscordGuildPartial[]>(
+    "/users/@me/guilds",
+    token,
+  );
+  return {
+    bot: {
+      id: me.id,
+      username: me.username,
+      global_name: me.global_name ?? null,
+      bot: me.bot ?? true,
+    },
+    guildCount: guilds.length,
+    guilds: guilds.map((g) => ({
+      id: g.id,
+      name: g.name,
+      owner: g.owner ?? false,
+    })),
+  };
+}
+
+export const STATUS_TOOLS: Tool[] = [
+  {
+    name: "fleet_health",
+    description:
+      "Fleet health: optional bridge GET /healthz (DISCORD_BRIDGE_HEALTH_URL) plus Discord REST /users/@me and guilds when DISCORD_BOT_TOKEN is set. Read-only. Not wake.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        includeGuilds: {
+          type: "boolean",
+          description:
+            "Include guild list from Discord REST (default true when token present)",
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "list_channel_map",
+    description:
+      "Read-only channel map shape (bridge schema) and, when token + guild id are available, Discord guild channels for that guild. Live enabled map rows stay on the bridge host.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        guildId: {
+          type: "string",
+          description:
+            "Discord guild snowflake. Defaults to DISCORD_GUILD_ID env.",
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+];
+
+/**
+ * Returns a result for a status tool, or undefined when the name is not a
+ * status tool. Discord errors are thrown and mapped by the caller.
+ */
+export async function handleStatusTool(
+  name: string,
+  args: Record<string, unknown>,
+): Promise<ToolResult | undefined> {
+  if (name === "fleet_health") {
+    const includeGuilds = args.includeGuilds !== false;
+    const healthUrl = bridgeHealthUrl();
+    const bridge = healthUrl
+      ? await probeBridgeHealth(healthUrl)
+      : {
+          reachable: false,
+          url: null as string | null,
+          note: "DISCORD_BRIDGE_HEALTH_URL unset — skip bridge probe. Bridge SoT is GET /healthz on host loopback :18083 (tunnel if remote).",
+        };
+
+    let discord: unknown = null;
+    let discordError: string | null = null;
+    if (hasBotToken()) {
+      try {
+        const token = requireBotToken();
+        const identity = await discordIdentity(token);
+        discord = includeGuilds
+          ? identity
+          : { bot: identity.bot, guildCount: identity.guildCount };
+      } catch (err) {
+        if (err instanceof DiscordApiError) {
+          discordError = `${err.message} body=${err.body}`;
+        } else {
+          discordError = err instanceof Error ? err.message : String(err);
+        }
+      }
+    } else {
+      discordError =
+        "DISCORD_BOT_TOKEN not set — Discord REST skipped. Configure plugin variables or your host vault/runtime environment.";
+    }
+
+    const ok =
+      (typeof bridge === "object" &&
+        bridge !== null &&
+        "reachable" in bridge &&
+        (bridge as { reachable: boolean }).reachable) ||
+      (discord !== null && discordError === null);
+
+    return jsonResult({
+      ok,
+      plugin: "discord-fleet",
+      version: VERSION,
+      wakesBots: false,
+      bridgeRepo: BRIDGE_REPO,
+      wakeHostHint: WAKE_HOST_HINT,
+      bridgeHealth: bridge,
+      discord,
+      discordError,
+      botEnable: BOT_ENABLE,
+      envHints: {
+        DISCORD_BOT_TOKEN: hasBotToken() ? "set" : "missing",
+        DISCORD_BRIDGE_HEALTH_URL: healthUrl ? "set" : "missing",
+        DISCORD_GUILD_ID: readEnv("DISCORD_GUILD_ID")
+          ? "set"
+          : "missing",
+      },
+    });
+  }
+
+  if (name === "list_channel_map") {
+    const guildId =
+      (typeof args.guildId === "string" && args.guildId.trim()) ||
+      readEnv("DISCORD_GUILD_ID") ||
+      null;
+
+    const body: Record<string, unknown> = {
+      note: "Live channel-map.json + security.json live on the bridge host, not in this plugin. Schema below matches bridge README, plus the separate global botsEnabled flag (missing means on).",
+      bridgeRepo: BRIDGE_REPO,
+      channelMapSchema: CHANNEL_MAP_SCHEMA,
+      botEnable: BOT_ENABLE,
+      securityModel:
+        "deny-by-default: guild allowlist → users → roles → channels → enabled map row → mention",
+      guildId,
+      discordChannels: null as unknown,
+    };
+
+    if (!guildId) {
+      body.discordChannelsError =
+        "No guildId argument and DISCORD_GUILD_ID unset — returning schema only.";
+      return jsonResult(body);
+    }
+
+    if (!hasBotToken()) {
+      body.discordChannelsError =
+        "DISCORD_BOT_TOKEN not set — cannot list Discord channels for guild.";
+      return jsonResult(body);
+    }
+
+    const token = requireBotToken();
+    const channels = await discordGet<DiscordChannel[]>(
+      `/guilds/${guildId}/channels`,
+      token,
+    );
+    body.discordChannels = channels
+      .map((c) => ({
+        id: c.id,
+        name: c.name ?? null,
+        type: c.type,
+        typeName: channelTypeName(c.type),
+        parent_id: c.parent_id ?? null,
+        position: c.position ?? null,
+      }))
+      .sort(
+        (a, b) =>
+          (a.position ?? 0) - (b.position ?? 0) ||
+          (a.name ?? "").localeCompare(b.name ?? ""),
+      );
+    return jsonResult(body);
+  }
+
+
+  return undefined;
+}

@@ -1,7 +1,7 @@
 {
   "name": "grokbot-discord-fleet",
-  "version": "0.3.32",
-  "description": "Discord fleet manage/status MCP + skills (Discord REST + optional self-hosted bridge /healthz). Each installer uses their own bot token \u2014 not shared provider infra. Not the wake bridge.",
+  "version": "0.3.33",
+  "description": "Discord fleet MCP (one discord-fleet server: status + manage tools, optional DISCORD_FLEET_READ_ONLY mode) + skills. Discord REST + optional self-hosted bridge /healthz. Each installer uses their own bot token \u2014 not shared provider infra. Not the wake bridge.",
   "author": {
     "name": "Matthew Rutledge",
     "url": "https://github.com/matthew-rutledge-dev"
@@ -15,7 +15,9 @@
     "mcp",
     "fleet",
     "status",
-    "manage"
+    "manage",
+    "moderation",
+    "read-only"
   ],
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
@@ -46,6 +48,11 @@
         "type": "string",
         "title": "Bridge callback URL",
         "description": "Optional. Full callback URL or base ending in /callback for YOUR bridge (placeholder example https://callback.example.com/callback). Never ship real operator hosts."
+      },
+      "DISCORD_FLEET_READ_ONLY": {
+        "type": "string",
+        "title": "Read-only mode",
+        "description": "Optional. Set to 1 (or true/yes/on) to hide every Discord write/moderation tool (post, timeout, kick, ban, unban, delete, purge) from the discord-fleet MCP server. Unset, empty, 0, false, no or off = all tools. Any other value also turns read-only ON (fails closed, with a warning). Read tools stay available; write tools always need confirm=true."
       }
     },
     "required": [

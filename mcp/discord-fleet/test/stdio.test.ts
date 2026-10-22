@@ -1,0 +1,189 @@
+/**
+ * Starts the built server over stdio the way hosts do: `node <root>/mcp/discord-fleet/dist/index.js`
+ * with an absolute path, from a neutral cwd (some hosts ignore the MCP `cwd`
+ * field), and with unset plugin variables passed through as literal ${...}
+ * strings. Checks tools/list in both modes, write gating, and that read tools
+ * run without confirm. No Discord token needed: no call reaches Discord.
+ */
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { fileURLToPath } from "node:url";
+import os from "node:os";
+import path from "node:path";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+
+const pkgDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const entry = path.join(pkgDir, "dist", "index.js");
+
+const READ_TOOLS = [
+  "fleet_health",
+  "list_channel_map",
+  "describe_manage_boundary",
+  "plan_channel_binding",
+  "inspect_guild",
+  "resolve_channel",
+  "list_channel_messages",
+  "check_bot_channel_permissions",
+  "evaluate_bridge_bot_enable",
+];
+const WRITE_TOOLS = [
+  "post_channel_message",
+  "timeout_member",
+  "kick_member",
+  "ban_member",
+  "unban_member",
+  "delete_message",
+  "purge_channel_messages",
+];
+
+async function connect(extraEnv: Record<string, string>) {
+  const env: Record<string, string> = {};
+  for (const [k, v] of Object.entries(process.env)) {
+    if (typeof v === "string" && !k.startsWith("DISCORD_")) env[k] = v;
+  }
+  // Unexpanded host placeholders, as some hosts pass them.
+  env.DISCORD_BOT_TOKEN = "${DISCORD_BOT_TOKEN}";
+  env.DISCORD_GUILD_ID = "${DISCORD_GUILD_ID}";
+  env.DISCORD_BRIDGE_HEALTH_URL = "${DISCORD_BRIDGE_HEALTH_URL}";
+  env.DISCORD_FLEET_READ_ONLY = "${DISCORD_FLEET_READ_ONLY}";
+  Object.assign(env, extraEnv);
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [entry],
+    cwd: os.tmpdir(),
+    env,
+    stderr: "pipe",
+  });
+  let stderr = "";
+  transport.stderr?.on("data", (d: Buffer) => (stderr += d.toString()));
+  const client = new Client({ name: "discord-fleet-test", version: "0.0.0" });
+  await client.connect(transport);
+  return Object.assign(client, { stderrText: () => stderr });
+}
+
+function textOf(res: unknown): Record<string, unknown> {
+  const content = (res as { content: Array<{ text: string }> }).content;
+  return JSON.parse(content[0].text) as Record<string, unknown>;
+}
+
+test("stdio (neutral cwd, placeholder env): all 16 tools; writes dry-run without confirm", async () => {
+  const client = await connect({});
+  try {
+    assert.equal(client.getServerVersion()?.name, "discord-fleet");
+    const { tools } = await client.listTools();
+    assert.deepEqual(tools.map((t) => t.name).sort(), [...READ_TOOLS, ...WRITE_TOOLS].sort());
+
+    for (const [name, args] of [
+      ["post_channel_message", { channelId: "000000000000000000", content: "hello" }],
+      ["kick_member", { guildId: "000000000000000000", userId: "000000000000000001" }],
+    ] as const) {
+      const body = textOf(await client.callTool({ name, arguments: { ...args } }));
+      assert.equal(body.dryRun, true, `${name} dry-run`);
+      assert.equal(body.discordWrites, false, `${name} no write`);
+    }
+
+    const boundary = textOf(
+      await client.callTool({ name: "describe_manage_boundary", arguments: {} }),
+    );
+    assert.equal(boundary.readOnly, false, "placeholder READ_ONLY is off");
+
+    const health = textOf(await client.callTool({ name: "fleet_health", arguments: {} }));
+    assert.deepEqual(health.envHints, {
+      DISCORD_BOT_TOKEN: "missing",
+      DISCORD_BRIDGE_HEALTH_URL: "missing",
+      DISCORD_GUILD_ID: "missing",
+    });
+  } finally {
+    await client.close();
+  }
+});
+
+test("stdio: read tools run without confirm (clean token-missing, never a 400)", async () => {
+  const client = await connect({});
+  try {
+    const calls: Array<[string, Record<string, unknown>]> = [
+      ["inspect_guild", {}],
+      ["inspect_guild", { guildId: "000000000000000000" }],
+      ["resolve_channel", { channelId: "000000000000000000" }],
+      ["list_channel_messages", { channelId: "000000000000000000" }],
+      ["check_bot_channel_permissions", { channelId: "000000000000000000" }],
+    ];
+    for (const [name, args] of calls) {
+      const res = await client.callTool({ name, arguments: args });
+      const text = JSON.stringify(textOf(res));
+      assert.ok(!/requires confirm/i.test(text), `${name} must not demand confirm: ${text}`);
+      assert.ok(!/HTTP 400|snowflake/i.test(text), `${name} must not reach Discord: ${text}`);
+      assert.ok(
+        /DISCORD_BOT_TOKEN is not set|guildId required/.test(text),
+        `${name} clean missing-config error: ${text}`,
+      );
+    }
+  } finally {
+    await client.close();
+  }
+});
+
+test("stdio: DISCORD_FLEET_READ_ONLY=1 hides and refuses write tools", async () => {
+  const client = await connect({ DISCORD_FLEET_READ_ONLY: "1" });
+  try {
+    const { tools } = await client.listTools();
+    assert.deepEqual(tools.map((t) => t.name).sort(), [...READ_TOOLS].sort());
+    const res = await client.callTool({
+      name: "post_channel_message",
+      arguments: { channelId: "000000000000000000", content: "hello", confirm: true },
+    });
+    assert.equal((res as { isError?: boolean }).isError, true);
+    assert.equal(textOf(res).readOnly, true);
+  } finally {
+    await client.close();
+  }
+});
+
+test("stdio: unrecognised DISCORD_FLEET_READ_ONLY fails closed with one stderr warning", async () => {
+  const client = await connect({ DISCORD_FLEET_READ_ONLY: "enabled" });
+  try {
+    const { tools } = await client.listTools();
+    assert.deepEqual(tools.map((t) => t.name).sort(), [...READ_TOOLS].sort());
+    const boundary = textOf(
+      await client.callTool({ name: "describe_manage_boundary", arguments: {} }),
+    );
+    assert.equal(boundary.readOnly, true, "boundary reports the server's resolved value");
+    const warnings = client.stderrText().split("\n").filter((l) => /not a recognised value/.test(l));
+    assert.equal(warnings.length, 1, client.stderrText());
+  } finally {
+    await client.close();
+  }
+});
+
+test("stdio: explicit off value lists all tools with no warning", async () => {
+  const client = await connect({ DISCORD_FLEET_READ_ONLY: "off" });
+  try {
+    const { tools } = await client.listTools();
+    assert.equal(tools.length, 16);
+    assert.equal(client.stderrText().trim(), "");
+  } finally {
+    await client.close();
+  }
+});
+
+test("stdio: describe_manage_boundary text reflects enabled / 1 / unset", async () => {
+  const cases: Array<[Record<string, string>, boolean, string]> = [
+    [{ DISCORD_FLEET_READ_ONLY: "enabled" }, true, 'read-only ON (DISCORD_FLEET_READ_ONLY="enabled", unrecognised value treated as ON)'],
+    [{ DISCORD_FLEET_READ_ONLY: "1" }, true, 'read-only ON (DISCORD_FLEET_READ_ONLY="1")'],
+    // connect() passes the literal placeholder by default -> unset
+    [{}, false, "read-only OFF (DISCORD_FLEET_READ_ONLY unset: unexpanded placeholder)"],
+  ];
+  for (const [env, readOnly, status] of cases) {
+    const client = await connect(env);
+    try {
+      const b = textOf(await client.callTool({ name: "describe_manage_boundary", arguments: {} }));
+      assert.equal(b.readOnly, readOnly, JSON.stringify(env));
+      assert.equal(b.readOnlyStatus, status, JSON.stringify(env));
+      assert.ok(!JSON.stringify(b).includes("DISCORD_FLEET_READ_ONLY=1 hides"), "no hardcoded =1 wording");
+      assert.ok(!/DISCORD_BOT_TOKEN=|DISCORD_GUILD_ID=/.test(JSON.stringify(b)), "echoes only the read-only flag");
+    } finally {
+      await client.close();
+    }
+  }
+});

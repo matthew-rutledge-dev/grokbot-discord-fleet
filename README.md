@@ -1,6 +1,6 @@
 # Grok Bot Discord Fleet
 
-Plugin home for **Discord fleet manage/status** MCP servers + skills. Aligned for **Grok Build** (xAI plugin marketplace conventions) with optional Cursor dual-support.
+Plugin home for the **Discord fleet** MCP server (`discord-fleet`: status + manage tools in one server) + skills. Aligned for **Grok Build** (xAI plugin marketplace conventions) with optional Cursor dual-support.
 
 **This is NOT the wake path.** Runtime wake (Gateway → `sendPrompt` / webhook) lives in a separate repo you may optionally self-host:
 
@@ -14,8 +14,7 @@ Do not merge this plugin into a shared general catalog without an explicit maint
 
 | Piece | Role |
 |-------|------|
-| `discord-fleet-status` MCP | Optional bridge `GET /healthz` probe + Discord REST identity/guild/channel reads |
-| `discord-fleet-manage` MCP | Boundary docs, dry-run channel-map plans, gated Discord REST (`confirm=true`): inspect/resolve, message history, post message, bot channel perms |
+| `discord-fleet` MCP (one server) | Status tools: optional bridge `GET /healthz` probe + Discord REST identity/guild/channel reads. Manage tools: boundary docs, dry-run channel-map plans, Discord REST reads (inspect/resolve, message history, bot channel perms; no confirm needed) and `confirm=true`-gated writes (post message, moderation). Optional **read-only mode** (`DISCORD_FLEET_READ_ONLY` on, e.g. `1`) hides every write/moderation tool |
 | Skills | Boundary, status, manage planning, operator-driven optional bridge setup, **callback-setup** (self-callback secrets), **wake-on-sleep** (recommended), **bridge-dual-deliver** (Discord wake decode + callback), hop-shorthand encode |
 
 ## Layout (Grok-canonical)
@@ -23,11 +22,11 @@ Do not merge this plugin into a shared general catalog without an explicit maint
 | Path | Purpose |
 |------|---------|
 | `.grok-plugin/plugin.json` | **Primary** Grok Build / marketplace manifest (includes `variables`) |
-| `.mcp.json` | MCP servers for Grok (catalog default name); env maps `${DISCORD_*}` |
+| `.mcp.json` | MCP server for Grok (catalog default name); one `discord-fleet` entry; env maps `${DISCORD_*}` |
 | `skills/` | Skill folders with `SKILL.md` |
-| `mcp/status`, `mcp/manage` | Local stdio MCP TypeScript sources (start via `node` + local `tsx` after bootstrap) |
-| `scripts/bootstrap-mcp.sh` | **Required** post-clone `npm ci` (Linux / macOS / Git Bash) |
-| `scripts/bootstrap-mcp.ps1` | **Required** post-clone `npm ci` on native Windows PowerShell |
+| `mcp/discord-fleet` | Local stdio MCP TypeScript sources for the single server (bootstrap runs `npm ci` + `npm run build`; hosts start `node <plugin-root>/mcp/discord-fleet/dist/index.js`; `npm test` runs the tests) |
+| `scripts/bootstrap-mcp.sh` | **Required** post-clone `npm ci` + `npm run build` (Linux / macOS / Git Bash) |
+| `scripts/bootstrap-mcp.ps1` | **Required** post-clone `npm ci` + `npm run build` on native Windows PowerShell |
 | `assets/logo.svg` | Marketplace logo (referenced from manifests) |
 | `.cursor-plugin/plugin.json` + `mcp.json` | Optional Cursor dual-support |
 
@@ -44,7 +43,7 @@ grok plugin marketplace list
 grok plugin install grokbot-discord-fleet --trust
 ```
 
-Then run **Post-clone MCP deps** (`./scripts/bootstrap-mcp.sh` or `.\scripts\bootstrap-mcp.ps1` from the installed plugin root) unless the host documents that it already ran `npm ci` for plugin MCP packages. Set **plugin variables** (below) to **your** Discord bot token — not anyone else's. The marketplace entry is SHA-pinned to this repository; do not replace it with an unpinned remote.
+Then run **Post-clone MCP deps** (`./scripts/bootstrap-mcp.sh` or `.\scripts\bootstrap-mcp.ps1` from the installed plugin root) unless the host documents that it already ran `npm ci` and `npm run build` for plugin MCP packages. Set **plugin variables** (below) to **your** Discord bot token — not anyone else's. The marketplace entry is SHA-pinned to this repository; do not replace it with an unpinned remote.
 
 ### Local/manual install
 
@@ -75,7 +74,7 @@ cp -a /path/to/grokbot-discord-fleet ~/.cursor/plugins/local/grokbot-discord-fle
 #   ~/.cursor/plugins/local/grokbot-discord-fleet/scripts/bootstrap-mcp.ps1
 ```
 
-Cursor uses `.cursor-plugin/plugin.json` and `mcp.json` (`${CURSOR_PLUGIN_ROOT}`). Set variables under Plugins → Configure (or equivalent). MCP servers start with **`node ./node_modules/tsx/dist/cli.mjs src/index.ts`** in each package cwd (portable on Windows and Linux — avoids fragile bare `npm` / `npm.cmd` stdio spawns). They fail until bootstrap has run.
+Cursor uses `.cursor-plugin/plugin.json` and `mcp.json` (`${CURSOR_PLUGIN_ROOT}`). Set variables under Plugins → Configure (or equivalent). The MCP server starts with **`node ${CURSOR_PLUGIN_ROOT}/mcp/discord-fleet/dist/index.js`** (Grok Build: `${GROK_PLUGIN_ROOT}`). The path is absolute, so it works even when a host ignores the MCP `cwd` field, on Windows and Linux, and avoids fragile bare `npm` / `npm.cmd` stdio spawns. It fails until bootstrap has built `dist/index.js`.
 
 Cursor does not read `~/.grok/plugins`. Copy or symlink the same commit into `~/.cursor/plugins/local/grokbot-discord-fleet`, run bootstrap there, set the same plugin variables, and restart Cursor. A symlink is one tree. A copy has to be updated again after every pull.
 
@@ -83,26 +82,26 @@ The Grok Bot desktop app also keeps its own plugin copy. It does not read `~/.gr
 
 ### If the MCP handshake closes
 
-`discord-fleet-status` and `discord-fleet-manage` speak MCP on stdin. A "connection closed" during initialize means the process exited before it answered. Check these in order:
+`discord-fleet` speaks MCP on stdin. A "connection closed" during initialize means the process exited before it answered. Check these in order:
 
 1. `node` and `npm` are on `PATH`. Run the bootstrap script for the copy that host actually loads.
 2. Set `DISCORD_BOT_TOKEN` in that host's plugin variables, or in the environment of the process that starts the host. The value is read when the host process starts. A session that is already open does not see a token added later.
-3. Confirm the host expanded its plugin-root variable before spawn. Grok Build uses `${GROK_PLUGIN_ROOT}` in `.mcp.json`. Cursor uses `${CURSOR_PLUGIN_ROOT}` in `mcp.json`. If that variable is empty, `cwd` is not the `mcp/status` or `mcp/manage` directory and Node exits immediately.
-4. On that machine only, you may set `cwd` in the local MCP file to the absolute `mcp/status` and `mcp/manage` directories. Do not commit that change. The public files keep the placeholder.
-5. Restart the host. Skills can load while the MCP servers stay down. The next start is what attaches the servers.
+3. Confirm the host expanded its plugin-root variable before spawn. Grok Build uses `${GROK_PLUGIN_ROOT}` in `.mcp.json`. Cursor uses `${CURSOR_PLUGIN_ROOT}` in `mcp.json`. If that variable is empty, the `dist/index.js` path in `args` is wrong and Node exits immediately (`Cannot find module`). The launch path does not depend on `cwd`, so a host that ignores `cwd` still works.
+4. On that machine only, you may replace the placeholder in `args` with the absolute path to `mcp/discord-fleet/dist/index.js`. Do not commit that change. The public files keep the placeholder.
+5. Restart the host. Skills can load while the MCP server stays down. The next start is what attaches the server.
 
-A manual check from the plugin root, with a throwaway token, should print one JSON line whose `serverInfo.name` is `discord-fleet-manage`:
+A manual check from the plugin root, with a throwaway token, should print one JSON line whose `serverInfo.name` is `discord-fleet`:
 
 ```bash
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"probe","version":"0"}}}' \
-  | DISCORD_BOT_TOKEN=probe node ./node_modules/tsx/dist/cli.mjs src/index.ts
+  | DISCORD_BOT_TOKEN=probe node mcp/discord-fleet/dist/index.js
 ```
 
-Run that with the working directory `mcp/manage`. Do not use your real bot token in the command line.
+Run that from the plugin root after bootstrap (any working directory works if you give the absolute path to `dist/index.js`). Do not use your real bot token in the command line.
 
 ### Post-clone MCP deps (required)
 
-Both MCP servers are TypeScript and need local `node_modules` (including `@modelcontextprotocol/sdk` and `tsx`). **README-only install without this step leaves MCP unloadable.**
+The MCP server is TypeScript: it needs local `node_modules` (including `@modelcontextprotocol/sdk` and `typescript`) and a build to `dist/index.js`. The bootstrap scripts do both. **README-only install without this step leaves MCP unloadable.**
 
 **Prereqs:** Node.js LTS on `PATH` (`node` and `npm` / `npm.cmd`).
 
@@ -110,7 +109,7 @@ Both MCP servers are TypeScript and need local `node_modules` (including `@model
 # Linux / macOS / Git Bash — from the plugin root:
 ./scripts/bootstrap-mcp.sh
 # equivalent:
-#   (cd mcp/status && npm ci) && (cd mcp/manage && npm ci)
+#   (cd mcp/discord-fleet && npm ci && npm run build)
 ```
 
 ```powershell
@@ -122,21 +121,27 @@ Both MCP servers are TypeScript and need local `node_modules` (including `@model
 
 **Windows notes (marketplace / Cursor):**
 - Prefer `bootstrap-mcp.ps1` on PowerShell. Git Bash works with `bootstrap-mcp.sh` (script is LF via `.gitattributes`; hardened so `pipefail` does not break older Git Bash).
-- MCP configs use `command: node` + `./node_modules/tsx/dist/cli.mjs` (not bare `npm start`) so stdio launch does not hang on `npm`/`npm.cmd` resolution.
+- MCP configs use `command: node` + the absolute built entry `<plugin-root>/mcp/discord-fleet/dist/index.js` (not bare `npm start`, not a cwd-relative path) so stdio launch does not hang on `npm`/`npm.cmd` resolution and works when the host ignores `cwd`.
 - If a `.sh` file was somehow checked out with CRLF and the shebang fails: `bash scripts/bootstrap-mcp.sh` or convert with `sed -i 's/\r$//' scripts/bootstrap-mcp.sh`.
-- Plugin root placeholders: Cursor `${CURSOR_PLUGIN_ROOT}` in `mcp.json`; Grok `${GROK_PLUGIN_ROOT}` in `.mcp.json`. Paths use forward slashes; Node on Windows accepts them when `cwd` is set.
+- Plugin root placeholders: Cursor `${CURSOR_PLUGIN_ROOT}` in `mcp.json`; Grok `${GROK_PLUGIN_ROOT}` in `.mcp.json`. Paths use forward slashes; Node on Windows accepts them.
 
-Re-run after pulling commits that change `mcp/*/package-lock.json`. No postinstall hooks ship in this repo — bootstrap is an explicit operator step (never silent RCE).
+Re-run after pulling commits that change `mcp/discord-fleet/package-lock.json`. No postinstall hooks ship in this repo — bootstrap is an explicit operator step (never silent RCE).
+
+**Upgrading from 0.3.32 or older (BREAKING):**
+
+- The MCP server names `discord-fleet-status` and `discord-fleet-manage` are replaced by one server, `discord-fleet`. Tool names are unchanged, but anything keyed to the old **server** names must be updated: MCP allowlists, auto-approve / permission rules, and host prefixes (for example Cursor shows plugin servers as `plugin-<plugin>-<server>`, so `plugin-grokbot-discord-fleet-discord-fleet-manage` becomes `plugin-grokbot-discord-fleet-discord-fleet`).
+- The old `mcp/status` and `mcp/manage` packages are gone. Hosts now launch the built `mcp/discord-fleet/dist/index.js`, which only exists after bootstrap (`npm ci` + `npm run build`). Run bootstrap once on every copy a host loads, then reload MCP servers (or restart the host).
 
 ## Plugin variables (marketplace-friendly)
 
-Declared in `.grok-plugin/plugin.json`, root `plugin.json`, and `.cursor-plugin/plugin.json` as a JSON Schema `variables` object. MCP configs inject the variables used by the MCP servers (`DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, and `DISCORD_BRIDGE_HEALTH_URL`) into their process environments. Callback variables remain manifest-declared for operator-driven skills/Bot Secrets and are not used by these MCP servers — **no secret values in the repo**.
+Declared in `.grok-plugin/plugin.json`, root `plugin.json`, and `.cursor-plugin/plugin.json` as a JSON Schema `variables` object. MCP configs inject only the variables the `discord-fleet` server reads (`DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID`, `DISCORD_BRIDGE_HEALTH_URL`, and `DISCORD_FLEET_READ_ONLY`) into its process environment. Callback variables remain manifest-declared for operator-driven skills/Bot Secrets; they are not passed to or read by the MCP server (least privilege) — **no secret values in the repo**.
 
 | Name | Required | Who sets it | Purpose |
 |------|----------|-------------|---------|
 | `DISCORD_BOT_TOKEN` | **Yes** (required product input) | **Each installer — their own bot** | Required for Discord REST status/manage tools (identity, reads, posts, permissions, and moderation). Get it from the [Discord Developer Portal](https://discord.com/developers/applications). **Never commit.** |
 | `DISCORD_GUILD_ID` | Optional | Your guild snowflake | Default guild for channel/guild status tools |
 | `DISCORD_BRIDGE_HEALTH_URL` | Optional | Your self-hosted bridge | Full URL to **your** bridge `GET /healthz` (e.g. `http://127.0.0.1:18083/healthz`) |
+| `DISCORD_FLEET_READ_ONLY` | Optional | You | Set to `1` (or `true` / `yes` / `on`) to hide every Discord write/moderation tool. Unset / empty / `0` / `false` / `no` / `off` = all tools; any other value also turns it **on** (fails closed, with a warning). See **[Read-only mode](#read-only-mode)** |
 | `DISCORD_BRIDGE_CALLBACK_TOKEN` | Optional | Your bridge `CALLBACK_TOKEN` | Bearer for **your** bridge `POST /callback` (agent self-callback / dual-deliver). Prefer Bot Secrets. **Never commit.** |
 | `DISCORD_BRIDGE_CALLBACK_URL` | Optional | Your bridge callback | Full callback URL or base ending in `/callback` (placeholder `https://callback.example.com/callback`). Never ship real operator hosts. |
 
@@ -145,7 +150,7 @@ Declared in `.grok-plugin/plugin.json`, root `plugin.json`, and `.cursor-plugin/
 Follow **[Discord bot token & invite](#discord-bot-token--invite)** below for the full bot-create / invite / intent checklist, then:
 
 1. Set plugin variable `DISCORD_BOT_TOKEN` (Plugins → Configure / host env injection — **prefer vault → runtime env** over plaintext `.env` on disk when avoidable).
-2. Optionally set `DISCORD_GUILD_ID` and/or `DISCORD_BRIDGE_HEALTH_URL` (self-hosted bridge `/healthz` — skill `discord-fleet-bridge-setup`).
+2. Optionally set `DISCORD_GUILD_ID` and/or `DISCORD_BRIDGE_HEALTH_URL` (self-hosted bridge `/healthz` — skill `discord-fleet-bridge-setup`). Set `DISCORD_FLEET_READ_ONLY=1` if this install should only read (no post / moderation tools).
 3. For wake **self-callback / dual-deliver**, file `DISCORD_BRIDGE_CALLBACK_TOKEN` + `DISCORD_BRIDGE_CALLBACK_URL` via skill `discord-fleet-callback-setup` (per-bot Secrets for multi-agent fleets).
 4. **Wake on sleep (recommended)** — right after callback setup, run skill `discord-wake-on-sleep` so a bridge wake hook can wake a sleeping Grok Bot computer. Without it, Discord messages sent while the bot sleeps can red-X after the hold window. Skipping is allowed but not recommended. See **Wake on sleep (recommended)**.
 
@@ -167,8 +172,8 @@ Each marketplace installer creates **their own** Discord application and bot. Th
 3. **Privileged Gateway Intents** (Portal → Bot → Privileged Gateway Intents) — match what you will run:
    - **This plugin alone** (Discord REST status/manage MCP) — **no** privileged gateway intents required (HTTP REST with the bot token only; this plugin does not open a Discord Gateway).
    - **Optional self-hosted wake bridge** (`matthew-rutledge-dev/grok-bot-discord-bridge`) — enable intents the bridge uses: **Message Content Intent** (privileged; required to read guild/DM message bodies for wake), plus non-privileged **Guilds**, **Guild Messages**, **Direct Messages** (DM wake) and **Guild Voice States** (non-privileged; the bridge requests it for its voice-channel play/stream features). See bridge README / skill `discord-fleet-bridge-setup`.
-4. **Invite the bot to your guild** — Portal → OAuth2 → **URL Generator**: scope **`bot`**; select the permissions in **[Discord bot permissions](#discord-bot-permissions)** below (messaging minimum, plus moderation if you will use manage MCP timeout/kick/ban/delete/purge). Open the generated URL while logged into Discord, select **your** guild, authorize. **Creating a token does not grant channel access by itself** — see permissions section (role + channel overwrites).
-5. **Optional plugin vars** — `DISCORD_GUILD_ID` (default guild snowflake for status/manage tools); `DISCORD_BRIDGE_HEALTH_URL` (full URL to **your** bridge `GET /healthz`, e.g. `http://127.0.0.1:18083/healthz`) when you self-host a bridge.
+4. **Invite the bot to your guild** — Portal → OAuth2 → **URL Generator**: scope **`bot`**; select the permissions in **[Discord bot permissions](#discord-bot-permissions)** below (messaging minimum, plus moderation if you will use the timeout/kick/ban/delete/purge tools). Open the generated URL while logged into Discord, select **your** guild, authorize. **Creating a token does not grant channel access by itself** — see permissions section (role + channel overwrites).
+5. **Optional plugin vars** — `DISCORD_GUILD_ID` (default guild snowflake for status/manage tools); `DISCORD_BRIDGE_HEALTH_URL` (full URL to **your** bridge `GET /healthz`, e.g. `http://127.0.0.1:18083/healthz`) when you self-host a bridge; `DISCORD_FLEET_READ_ONLY=1` to hide write/moderation tools.
 6. **Optional dual-deliver / self-callback** (separate self-hosted bridge) — file **`DISCORD_BRIDGE_CALLBACK_TOKEN`** + **`DISCORD_BRIDGE_CALLBACK_URL`** via secret cards (skill `discord-fleet-callback-setup`). Auth is **header-only** as of bridge **0.2.4+**: `Authorization: Bearer <token>` or header **`x-callback-token`**. Query `?token=` is **rejected (401)** — do not use.
 7. **Wake on sleep (recommended)** — after callback setup, run skill `discord-wake-on-sleep` (one webhook-triggered routine per Grok Bot account + bridge `SENDPROMPT_WAKE_URL` / `SENDPROMPT_WAKE_KEY`). Grok Bot computers sleep when idle and Discord alone can't wake them; without this, messages sent while asleep can red-X after the hold window. Skipping is allowed but not recommended.
 8. **Skills** — bot/bridge bring-up: `discord-fleet-bridge-setup`; callback secrets: `discord-fleet-callback-setup`; wake on sleep (recommended): `discord-wake-on-sleep`; wake decode (compact and legacy formats) / dual-deliver: `discord-bridge-dual-deliver` (a Discord wake loads only this skill); hop encode: `discord-fleet-hop-shorthand` (prefer `process.env.DISCORD_BRIDGE_CALLBACK_*` on each woken bot).
@@ -189,7 +194,7 @@ Token creation ≠ automatic access. The bot can only act where **(1)** the invi
 
 **Messaging-only permission integer** (View + Send + History + Attach + Embed): **`117760`**.
 
-### Moderation (manage MCP 0.3.24+)
+### Moderation (manage tools, 0.3.24+)
 
 | Permission | Bit | Needed for |
 |------------|-----|------------|
@@ -211,7 +216,7 @@ Token creation ≠ automatic access. The bot can only act where **(1)** the invi
    - Messaging + Manage Messages: `125952`
    - Full moderation set: `1099511753734`
 4. Copy the generated URL → open while logged into Discord → select **your** guild → authorize.
-5. In the guild: **Server Settings → Roles** — drag the bot’s role **above** any roles you may timeout/kick/ban; confirm channel overwrites allow **View Channel** (and Send / History / Manage Messages as needed) in target channels. Use manage MCP `check_bot_channel_permissions` (`confirm=true`) to verify.
+5. In the guild: **Server Settings → Roles** — drag the bot’s role **above** any roles you may timeout/kick/ban; confirm channel overwrites allow **View Channel** (and Send / History / Manage Messages as needed) in target channels. Use `check_bot_channel_permissions` (read-only, no confirm needed) to verify.
 
 ### How to add permissions later (without re-creating the bot)
 
@@ -228,10 +233,10 @@ All moderation manage tools still require **`confirm=true`** (dry-run preview wi
 
 | Endpoint | When | Purpose |
 |----------|------|---------|
-| `https://discord.com/api/v10/*` (Discord REST) | When `DISCORD_BOT_TOKEN` is set | Identity, guilds, channels; confirm-gated post / moderation via manage MCP |
+| `https://discord.com/api/v10/*` (Discord REST) | When `DISCORD_BOT_TOKEN` is set | Identity, guilds, channels; confirm-gated post / moderation via the manage tools |
 | Bridge `GET /healthz` at `DISCORD_BRIDGE_HEALTH_URL` | Optional (your bridge) | Liveness / `discordReady` probe — **not** wake / `sendPrompt` |
 
-Confirm-gated Discord REST from manage MCP may post / moderate when you call tools with `confirm=true`. No channel-map writes, no gateway listen, no wake / `sendPrompt` from this plugin.
+Confirm-gated Discord REST from the manage tools may post / moderate (unless read-only mode is on) when you call tools with `confirm=true`. No channel-map writes, no gateway listen, no wake / `sendPrompt` from this plugin.
 
 ## Plugin root path variables (honest)
 
@@ -241,24 +246,48 @@ Confirm-gated Discord REST from manage MCP may post / moderate when you call too
 | **Cursor** | `mcp.json` | `${CURSOR_PLUGIN_ROOT}` — Cursor expands this for local plugins |
 | Claude Code (compat) | (not dual-shipped here) | Would use `${CLAUDE_PLUGIN_ROOT}` in a `.claude-plugin` + `.mcp.json` layout |
 
-Do **not** assume `${CURSOR_PLUGIN_ROOT}` works under Grok, or `${GROK_PLUGIN_ROOT}` under Cursor. Keep both MCP files if you need both hosts.
+Do **not** assume `${CURSOR_PLUGIN_ROOT}` works under Grok, or `${GROK_PLUGIN_ROOT}` under Cursor. Keep both MCP files if you need both hosts. Each file has one entry, `discord-fleet`.
 
-## MCP servers
+## MCP server (`discord-fleet`)
 
-### Status tools (`discord-fleet-status`)
+One stdio server holds every tool (same pattern as single-server MCPs such as GitHub's). Tool names did not change from the old two-server layout (`discord-fleet-status` + `discord-fleet-manage`, 0.3.32 and older), so skills and prompts that call tools by name keep working; only the server name is now `discord-fleet`.
+
+Read tools never need `confirm` and run in both modes. That includes `inspect_guild`, `resolve_channel`, `check_bot_channel_permissions`, and `list_channel_messages` (up to 50 recent messages per call), so any agent with this server can read whatever the bot token can see; scope the bot's channel access accordingly. The 7 write tools (post + moderation) always need `confirm=true` (dry-run preview without it). Unset plugin variables that a host passes through literally (for example `DISCORD_GUILD_ID=${DISCORD_GUILD_ID}`) and empty values are treated as unset.
+
+### Read-only mode
+
+Set plugin variable / env **`DISCORD_FLEET_READ_ONLY=1`** (also `true`, `yes`, `on`) to run the server read-only. The switch fails closed:
+
+| Value | Mode |
+|-------|------|
+| unset, empty, or an unexpanded `${...}` placeholder | off (all tools) |
+| `0`, `false`, `no`, `off` (any case) | off (all tools) |
+| `1`, `true`, `yes`, `on` (any case) | **on** |
+| anything else (e.g. `enabled`, `2`) | **on**, and the server writes one warning to stderr at start |
+
+When on:
+
+- `tools/list` hides every tool that can change Discord: `post_channel_message`, `timeout_member`, `kick_member`, `ban_member`, `unban_member`, `delete_message`, `purge_channel_messages`.
+- Calling one of those names anyway is refused with `readOnly: true` and no Discord call.
+- The 9 read tools stay available: `fleet_health`, `list_channel_map`, `describe_manage_boundary`, `plan_channel_binding`, `inspect_guild`, `resolve_channel`, `list_channel_messages`, `check_bot_channel_permissions`, `evaluate_bridge_bot_enable`. None of them need `confirm`, so read-only mode still lets the agent read guild metadata, roles, channels, permissions and message history (`list_channel_messages`, up to 50 messages per call, content truncated to 500 chars each). Read-only means "cannot change Discord", not "cannot read".
+- `describe_manage_boundary` reports `readOnly: true|false` plus `readOnlyStatus`, which shows the actual flag value and how it was read, e.g. `read-only ON (DISCORD_FLEET_READ_ONLY="enabled", unrecognised value treated as ON)`, `read-only ON (DISCORD_FLEET_READ_ONLY="1")`, `read-only OFF (DISCORD_FLEET_READ_ONLY="off", explicit off value)` or `read-only OFF (DISCORD_FLEET_READ_ONLY unset: not set)`. It echoes only this flag, never other variables.
+
+With read-only off (default), all 16 tools are listed and every write tool still needs `confirm=true`; without it you get a dry-run preview and nothing is sent. The setting is read when the server starts, so reload MCP servers (or restart the host) after changing it.
+
+### Status tools
 
 - `fleet_health` — probe bridge `/healthz` when `DISCORD_BRIDGE_HEALTH_URL` is set; Discord REST `GET /users/@me` + guilds when token is set
 - `list_channel_map` — documented bridge channel-map schema + Discord guild channels when token + guild id are available
 
-### Manage tools (`discord-fleet-manage`)
+### Manage tools
 
-- `describe_manage_boundary` — this plugin does **not** wake bots / call `sendPrompt`; lists confirm-gated tools
+- `describe_manage_boundary` — this plugin does **not** wake bots / call `sendPrompt`; lists read tools (no confirm) and confirm-gated write tools, and reports `readOnly`
 - `plan_channel_binding` — dry-run draft row for bridge `channel-map.json` (no writes)
-- `inspect_guild` — Discord REST guild/roles/channels snapshot; requires `confirm=true`
-- `resolve_channel` — Discord REST `GET /channels/{id}`; requires `confirm=true`
-- `list_channel_messages` — Discord REST recent messages (limit capped at 50); requires `confirm=true`
+- `inspect_guild` — Discord REST guild/roles/channels snapshot; read-only, no confirm needed
+- `resolve_channel` — Discord REST `GET /channels/{id}`; read-only, no confirm needed
+- `list_channel_messages` — Discord REST recent messages (limit capped at 50); read-only, no confirm needed
 - `post_channel_message` — Discord REST create message; dry-run without `confirm=true`; refuses empty content; returns message id
-- `check_bot_channel_permissions` — computed bot View/Send/History/Manage Messages + Kick/Ban/Moderate flags; requires `confirm=true`
+- `check_bot_channel_permissions` — computed bot View/Send/History/Manage Messages + Kick/Ban/Moderate flags; read-only, no confirm needed
 - `timeout_member` — Moderate Members timeout (`durationSeconds=0` clears); dry-run without `confirm=true`
 - `kick_member` — Kick Members; dry-run without `confirm=true`
 - `ban_member` — Ban Members (optional `deleteMessageSeconds`); dry-run without `confirm=true`
@@ -276,13 +305,13 @@ Bridge bots use two stores. Do not collapse them into one flag. This plugin eval
 | Global | `botsEnabled` | **ON**. A missing flag means enabled. | Whether bridge bots run at all. When off, bots do not run even if a site is enabled. |
 | Per-site | `sites[].enabled` (same meaning as channel-map `channels[].enabled`) | Off unless that site is explicitly enabled | Whether that site is on. Changing it does not write `botsEnabled`. |
 
-Evaluation order (`bridgeBotRunsForSite` in `mcp/manage/src/bot-enable.ts`):
+Evaluation order (`bridgeBotRunsForSite` in `mcp/discord-fleet/src/bot-enable.ts`):
 
 1. Read `botsEnabled`. If the flag is missing or not a boolean, treat it as on.
 2. Read that site's `enabled` flag from the separate site store. A missing site is off.
 3. The bridge bot runs for the site only when global is on **and** that site is on.
 
-`setGlobalBotsEnabled` copies site rows unchanged. `setSiteEnabled` preserves `botsEnabled` exactly, including when it was omitted. Manage MCP `evaluate_bridge_bot_enable` returns that result (no Discord call). Example:
+`setGlobalBotsEnabled` copies site rows unchanged. `setSiteEnabled` preserves `botsEnabled` exactly, including when it was omitted. The `evaluate_bridge_bot_enable` tool returns that result (no Discord call). Example:
 
 ```json
 {
@@ -503,8 +532,8 @@ On the Grok Bot computer: `SENDPROMPT_TUNNEL_URL` is **required**: `scripts/ensu
 ## Skills
 
 - `discord-fleet-boundary` — always on for fleet work; manage/status vs wake path; **per-installer credentials, not shared provider**; points at callback token/URL + callback-setup for wake replies
-- `discord-fleet-status` — health/status checks via status MCP
-- `discord-fleet-manage` — channel-binding plans / gated inspect + message history / post / bot channel perms (dry-run / confirm)
+- `discord-fleet-status` — health/status checks via the `discord-fleet` MCP status tools
+- `discord-fleet-manage` — channel-binding plans, inspect + message history + bot channel perms (reads, no confirm), post / moderation (writes: dry-run without `confirm=true`; hidden in read-only mode) via the `discord-fleet` MCP
 - `discord-fleet-bridge-setup` — **operator-driven** optional wake-bridge setup on an explicit ask (clone/deploy/verify `/healthz` on **your** host; never silent postinstall; never `curl|bash`; prefer plugin vars / vault→runtime env over plaintext `.env`). After the bridge is up, run `discord-fleet-callback-setup` for agent self-callback, then `discord-wake-on-sleep` (recommended). Skill includes short **Windows vs Linux** notes.
 - `discord-fleet-callback-setup` — **first-class** operator-driven setup for durable `DISCORD_BRIDGE_CALLBACK_TOKEN` + `DISCORD_BRIDGE_CALLBACK_URL` (secure secret card; verify present/missing only; safe curl smoke; per-bot Secrets for multi-agent fleets). Not silent postinstall.
 - `discord-wake-on-sleep` — **recommended** setup step right after callback setup: one webhook-triggered routine per Grok Bot account (idempotent) that runs `scripts/ensure-sendprompt-tunnel.sh` when the bridge wake hook fires; key collected by masked secret card (bot never sees it), URL pasted in chat, no-echo `.env` write
