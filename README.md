@@ -14,7 +14,7 @@ Do not merge this plugin into a shared general catalog without an explicit maint
 
 | Piece | Role |
 |-------|------|
-| `discord-fleet` MCP (one server) | Status tools: optional bridge `GET /healthz` probe + Discord REST identity/guild/channel reads. Manage tools: boundary docs, dry-run channel-map plans, Discord REST reads (inspect/resolve, message history, bot channel perms; no confirm needed) and `confirm=true`-gated writes (post message, moderation). Optional **read-only mode** (`DISCORD_FLEET_READ_ONLY=1`) hides every write/moderation tool |
+| `discord-fleet` MCP (one server) | Status tools: optional bridge `GET /healthz` probe + Discord REST identity/guild/channel reads. Manage tools: boundary docs, dry-run channel-map plans, Discord REST reads (inspect/resolve, message history, bot channel perms; no confirm needed) and `confirm=true`-gated writes (post message, moderation). Optional **read-only mode** (`DISCORD_FLEET_READ_ONLY` on, e.g. `1`) hides every write/moderation tool |
 | Skills | Boundary, status, manage planning, operator-driven optional bridge setup, **callback-setup** (self-callback secrets), **wake-on-sleep** (recommended), **bridge-dual-deliver** (Discord wake decode + callback), hop-shorthand encode |
 
 ## Layout (Grok-canonical)
@@ -270,7 +270,7 @@ When on:
 - `tools/list` hides every tool that can change Discord: `post_channel_message`, `timeout_member`, `kick_member`, `ban_member`, `unban_member`, `delete_message`, `purge_channel_messages`.
 - Calling one of those names anyway is refused with `readOnly: true` and no Discord call.
 - The 9 read tools stay available: `fleet_health`, `list_channel_map`, `describe_manage_boundary`, `plan_channel_binding`, `inspect_guild`, `resolve_channel`, `list_channel_messages`, `check_bot_channel_permissions`, `evaluate_bridge_bot_enable`. None of them need `confirm`, so read-only mode still lets the agent read guild metadata, roles, channels, permissions and message history (`list_channel_messages`, up to 50 messages per call, content truncated to 500 chars each). Read-only means "cannot change Discord", not "cannot read".
-- `describe_manage_boundary` reports `readOnly: true|false`.
+- `describe_manage_boundary` reports `readOnly: true|false` plus `readOnlyStatus`, which shows the actual flag value and how it was read, e.g. `read-only ON (DISCORD_FLEET_READ_ONLY="enabled", unrecognised value treated as ON)`, `read-only ON (DISCORD_FLEET_READ_ONLY="1")`, `read-only OFF (DISCORD_FLEET_READ_ONLY="off", explicit off value)` or `read-only OFF (DISCORD_FLEET_READ_ONLY unset: not set)`. It echoes only this flag, never other variables.
 
 With read-only off (default), all 16 tools are listed and every write tool still needs `confirm=true`; without it you get a dry-run preview and nothing is sent. The setting is read when the server starts, so reload MCP servers (or restart the host) after changing it.
 

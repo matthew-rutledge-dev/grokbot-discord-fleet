@@ -39,6 +39,7 @@ import {
 } from "./bot-enable.js";
 import { jsonResult, type ToolResult } from "./result.js";
 import { readEnv } from "./env.js";
+import { describeReadOnly, type ReadOnlyResolution } from "./readonly.js";
 import { SERVER_NAME, VERSION } from "./version.js";
 
 const BRIDGE_REPO = "matthew-rutledge-dev/grok-bot-discord-bridge";
@@ -72,7 +73,7 @@ function resolveGuildId(args: Record<string, unknown>): string | null {
 }
 
 /** Server state the manage handlers report (resolved once at server start). */
-export type ManageContext = { readOnly: boolean };
+export type ManageContext = { readOnly: ReadOnlyResolution };
 
 export const MANAGE_TOOLS: Tool[] = [
   {
@@ -467,16 +468,18 @@ export const MANAGE_TOOLS: Tool[] = [
 export async function handleManageTool(
   name: string,
   args: Record<string, unknown>,
-  ctx: ManageContext = { readOnly: false },
+  ctx: ManageContext = { readOnly: { readOnly: false, source: "unset", unsetKind: "not set" } },
 ): Promise<ToolResult | undefined> {
   if (name === "describe_manage_boundary") {
     return jsonResult({
       pluginRole: "manage + status only",
       server: SERVER_NAME,
       version: VERSION,
-      readOnly: ctx.readOnly,
+      readOnly: ctx.readOnly.readOnly,
+      readOnlyStatus: describeReadOnly(ctx.readOnly),
+      readOnlySource: ctx.readOnly.source,
       readOnlyEnv:
-        "DISCORD_FLEET_READ_ONLY=1 hides post/moderation tools (post_channel_message, timeout_member, kick_member, ban_member, unban_member, delete_message, purge_channel_messages); write tools still need confirm=true when shown",
+        "DISCORD_FLEET_READ_ONLY: unset/empty/placeholder or 0/false/no/off = off; 1/true/yes/on = on; any other non-empty value = on (fails closed). When on, post/moderation tools (post_channel_message, timeout_member, kick_member, ban_member, unban_member, delete_message, purge_channel_messages) are hidden and refused; read tools stay available. Write tools always need confirm=true.",
       wakesBots: false,
       sendPrompt: false,
       gatewayListen: false,

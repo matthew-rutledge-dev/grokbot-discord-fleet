@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { isUnsetValue, readEnv } from "../src/env.js";
-import { readOnlyFromEnv, resolveReadOnly } from "../src/readonly.js";
+import { describeReadOnly, readOnlyFromEnv, resolveReadOnly } from "../src/readonly.js";
 
 test("readEnv treats empty and literal ${...} placeholders as unset", () => {
   const env = {
@@ -56,14 +56,44 @@ test("read-only fails closed on unrecognised values, with one warning", () => {
   }
   for (const v of ["1", "true", "yes", "on", "ON"]) {
     const r = resolveReadOnly(v);
-    assert.deepEqual(r, { readOnly: true }, v);
+    assert.deepEqual(r, { readOnly: true, source: "on", raw: v }, v);
   }
-  for (const v of ["0", "false", "no", "off", "OFF", "", "  ", undefined]) {
+  for (const v of ["0", "false", "no", "off", "OFF"]) {
     const r = resolveReadOnly(v);
-    assert.deepEqual(r, { readOnly: false }, String(v));
+    assert.deepEqual(r, { readOnly: false, source: "off", raw: v }, v);
+  }
+  for (const v of ["", "  ", undefined, "${DISCORD_FLEET_READ_ONLY}"]) {
+    const r = resolveReadOnly(v);
+    assert.equal(r.readOnly, false, String(v));
+    assert.equal(r.source, "unset", String(v));
+    assert.equal(r.warning, undefined, String(v));
   }
   assert.equal(readOnlyFromEnv({ DISCORD_FLEET_READ_ONLY: "enabled" }), true);
   assert.equal(readOnlyFromEnv({ DISCORD_FLEET_READ_ONLY: "2" }), true);
   assert.equal(readOnlyFromEnv({ DISCORD_FLEET_READ_ONLY: "off" }), false);
   assert.equal(readOnlyFromEnv({ DISCORD_FLEET_READ_ONLY: "${DISCORD_FLEET_READ_ONLY}" }), false);
+});
+
+test("describeReadOnly reflects the real value and classification", () => {
+  assert.equal(
+    describeReadOnly(resolveReadOnly("enabled")),
+    'read-only ON (DISCORD_FLEET_READ_ONLY="enabled", unrecognised value treated as ON)',
+  );
+  assert.equal(describeReadOnly(resolveReadOnly("1")), 'read-only ON (DISCORD_FLEET_READ_ONLY="1")');
+  assert.equal(describeReadOnly(resolveReadOnly(" TRUE ")), 'read-only ON (DISCORD_FLEET_READ_ONLY="TRUE")');
+  assert.equal(
+    describeReadOnly(resolveReadOnly("off")),
+    'read-only OFF (DISCORD_FLEET_READ_ONLY="off", explicit off value)',
+  );
+  assert.equal(describeReadOnly(resolveReadOnly(undefined)), "read-only OFF (DISCORD_FLEET_READ_ONLY unset: not set)");
+  assert.equal(describeReadOnly(resolveReadOnly("")), "read-only OFF (DISCORD_FLEET_READ_ONLY unset: empty)");
+  assert.equal(
+    describeReadOnly(resolveReadOnly("${DISCORD_FLEET_READ_ONLY}")),
+    "read-only OFF (DISCORD_FLEET_READ_ONLY unset: unexpanded placeholder)",
+  );
+  const long = "x".repeat(100);
+  assert.ok(describeReadOnly(resolveReadOnly(long)).includes(`"${"x".repeat(32)}"`), "value capped at 32 chars");
+  for (const v of [undefined, "", "0", "enabled"]) {
+    assert.ok(!describeReadOnly(resolveReadOnly(v)).includes('="1"'), `no hardcoded "1" for ${String(v)}`);
+  }
 });

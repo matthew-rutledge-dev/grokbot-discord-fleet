@@ -166,3 +166,24 @@ test("stdio: explicit off value lists all tools with no warning", async () => {
     await client.close();
   }
 });
+
+test("stdio: describe_manage_boundary text reflects enabled / 1 / unset", async () => {
+  const cases: Array<[Record<string, string>, boolean, string]> = [
+    [{ DISCORD_FLEET_READ_ONLY: "enabled" }, true, 'read-only ON (DISCORD_FLEET_READ_ONLY="enabled", unrecognised value treated as ON)'],
+    [{ DISCORD_FLEET_READ_ONLY: "1" }, true, 'read-only ON (DISCORD_FLEET_READ_ONLY="1")'],
+    // connect() passes the literal placeholder by default -> unset
+    [{}, false, "read-only OFF (DISCORD_FLEET_READ_ONLY unset: unexpanded placeholder)"],
+  ];
+  for (const [env, readOnly, status] of cases) {
+    const client = await connect(env);
+    try {
+      const b = textOf(await client.callTool({ name: "describe_manage_boundary", arguments: {} }));
+      assert.equal(b.readOnly, readOnly, JSON.stringify(env));
+      assert.equal(b.readOnlyStatus, status, JSON.stringify(env));
+      assert.ok(!JSON.stringify(b).includes("DISCORD_FLEET_READ_ONLY=1 hides"), "no hardcoded =1 wording");
+      assert.ok(!/DISCORD_BOT_TOKEN=|DISCORD_GUILD_ID=/.test(JSON.stringify(b)), "echoes only the read-only flag");
+    } finally {
+      await client.close();
+    }
+  }
+});

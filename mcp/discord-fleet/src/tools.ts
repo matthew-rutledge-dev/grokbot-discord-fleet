@@ -2,7 +2,8 @@
  * Tool registry for the single discord-fleet MCP server.
  *
  * All status + manage tools live in one server. Set
- * DISCORD_FLEET_READ_ONLY=1 (or true/yes/on) to hide every tool that can
+ * DISCORD_FLEET_READ_ONLY on (1/true/yes/on, or any unrecognised non-empty
+ * value, which fails closed) to hide every tool that can
  * write to Discord (post / moderation). Hidden tools are also refused at call
  * time. Write tools keep their own confirm=true gate in both modes.
  */
@@ -16,6 +17,9 @@ export {
   readOnlyFromEnv,
   readOnlyResolutionFromEnv,
   resolveReadOnly,
+  describeReadOnly,
+  type ReadOnlyResolution,
+  type ReadOnlySource,
 } from "./readonly.js";
 
 /** Tools that can change Discord state when called with confirm=true. */

@@ -20,6 +20,7 @@
   - Docs: README upgrade note marked **BREAKING** (server names `discord-fleet-status` / `discord-fleet-manage` → `discord-fleet`; update allowlists / permission prefixes; launch needs `dist/index.js` from bootstrap). README states read tools (incl. `list_channel_messages`, up to 50 messages per call) run without confirm and stay available in read-only mode, with a fail-closed value table. Stale "confirm-gated reads" wording removed from the boundary and manage skills and the README.
   - CI: `.github/workflows/ci.yml` runs `npm ci`, typecheck, build and test in `mcp/discord-fleet` on ubuntu-latest and windows-latest with Node 20 (no secrets, read-only token).
   - Tests: fail-closed read-only unit tests, plus stdio tests that `enabled` hides write tools with exactly one stderr warning and `off` lists all 16 tools with no warning.
+- `describe_manage_boundary` now reports the real read-only state instead of always saying `DISCORD_FLEET_READ_ONLY=1`: the server keeps the flag's value (trimmed, max 32 chars) and its classification when it resolves read-only at start, and returns `readOnlyStatus` (e.g. `read-only ON (DISCORD_FLEET_READ_ONLY="enabled", unrecognised value treated as ON)`, `read-only ON (DISCORD_FLEET_READ_ONLY="1")`, `read-only OFF (DISCORD_FLEET_READ_ONLY unset: not set)`) plus `readOnlySource` (`on` / `unrecognised` / `off` / `unset`). Only this flag's value is echoed. Hardcoded `=1` wording removed from the boundary output, README, skills and package description. Tests cover `enabled`, `1` and unset.
 
 ## 0.3.32
 

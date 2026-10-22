@@ -3,8 +3,9 @@
  * discord-fleet MCP — one server for Discord fleet status + manage.
  * Status: optional bridge /healthz + Discord REST reads.
  * Manage: boundary docs, dry-run plans, Discord REST reads (no confirm) and
- * confirm-gated writes (post / moderation). DISCORD_FLEET_READ_ONLY=1 hides
- * write tools (fails closed: unrecognised non-empty values also mean on).
+ * confirm-gated writes (post / moderation). Read-only mode
+ * (DISCORD_FLEET_READ_ONLY on; unrecognised non-empty values also mean on)
+ * hides write tools.
  * Not on the wake path: no sendPrompt, no gateway, no bridge /callback.
  * Token from env only.
  */
@@ -23,11 +24,13 @@ import {
   isWriteTool,
   listTools,
   readOnlyResolutionFromEnv,
+  type ReadOnlyResolution,
 } from "./tools.js";
 import { SERVER_NAME, VERSION } from "./version.js";
 
-/** readOnly is resolved once at start; every handler uses this value. */
-export function createServer(readOnly: boolean): Server {
+/** Read-only is resolved once at start; every handler uses this resolution. */
+export function createServer(readOnlyState: ReadOnlyResolution): Server {
+  const readOnly = readOnlyState.readOnly;
   const server = new Server(
     { name: SERVER_NAME, version: VERSION },
     { capabilities: { tools: {} } },
@@ -55,7 +58,7 @@ export function createServer(readOnly: boolean): Server {
     try {
       const result =
         (await handleStatusTool(name, args)) ??
-        (await handleManageTool(name, args, { readOnly }));
+        (await handleManageTool(name, args, { readOnly: readOnlyState }));
       if (result) return result;
       return jsonResult({ error: `Unknown tool: ${name}` }, true);
     } catch (err) {
@@ -74,10 +77,10 @@ export function createServer(readOnly: boolean): Server {
 }
 
 async function main() {
-  const { readOnly, warning } = readOnlyResolutionFromEnv();
-  if (warning) console.error(warning);
+  const readOnlyState = readOnlyResolutionFromEnv();
+  if (readOnlyState.warning) console.error(readOnlyState.warning);
   const transport = new StdioServerTransport();
-  await createServer(readOnly).connect(transport);
+  await createServer(readOnlyState).connect(transport);
 }
 
 main().catch((err) => {

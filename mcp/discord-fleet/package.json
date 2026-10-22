@@ -3,7 +3,7 @@
   "version": "0.3.33",
   "private": true,
   "type": "module",
-  "description": "MCP server: Discord fleet status + manage in one server (bridge /healthz, Discord REST reads, confirm-gated post/moderation; DISCORD_FLEET_READ_ONLY=1 hides writes)",
+  "description": "MCP server: Discord fleet status + manage in one server (bridge /healthz, Discord REST reads, confirm-gated post/moderation; DISCORD_FLEET_READ_ONLY on hides writes)",
   "scripts": {
     "start": "node dist/index.js",
     "dev": "node ./node_modules/tsx/dist/cli.mjs src/index.ts",
