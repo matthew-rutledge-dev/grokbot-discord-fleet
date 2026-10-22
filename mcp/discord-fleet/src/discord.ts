@@ -1,10 +1,12 @@
 /**
- * Minimal Discord REST helpers (manage). Token from env only — never hardcoded.
+ * Minimal Discord REST helpers (status + manage). Token from env only — never hardcoded.
  * Gated reads + confirm-gated writes (post / moderation). No wake / sendPrompt.
  */
 const API = "https://discord.com/api/v10";
-const UA =
-  "DiscordBot (https://github.com/matthew-rutledge-dev/grokbot-discord-fleet, 0.3.32)";
+import { VERSION } from "./version.js";
+
+const API_UA_URL = "https://github.com/matthew-rutledge-dev/grokbot-discord-fleet";
+const UA = `DiscordBot (${API_UA_URL}, ${VERSION})`;
 
 export class DiscordApiError extends Error {
   constructor(

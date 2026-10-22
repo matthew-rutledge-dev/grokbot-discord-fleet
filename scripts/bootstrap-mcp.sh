@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install MCP package deps for first-time clone / local plugin install.
-# Required before discord-fleet-status / discord-fleet-manage can start.
+# Required before the discord-fleet MCP server can start (one package: mcp/discord-fleet).
 #
 # Linux / macOS / Git Bash (Windows):
 #   ./scripts/bootstrap-mcp.sh
@@ -36,13 +36,12 @@ if ! command -v node >/dev/null 2>&1; then
   exit 1
 fi
 
-for pkg in status manage; do
-  dir="$ROOT/mcp/$pkg"
-  if [[ ! -f "$dir/package.json" ]]; then
-    echo "bootstrap-mcp: missing $dir/package.json" >&2
-    exit 1
-  fi
-  echo "bootstrap-mcp: npm ci in mcp/$pkg"
-  (cd "$dir" && "$NPM" ci)
-done
+pkg=discord-fleet
+dir="$ROOT/mcp/$pkg"
+if [[ ! -f "$dir/package.json" ]]; then
+  echo "bootstrap-mcp: missing $dir/package.json" >&2
+  exit 1
+fi
+echo "bootstrap-mcp: npm ci in mcp/$pkg"
+(cd "$dir" && "$NPM" ci)
 echo "bootstrap-mcp: done"

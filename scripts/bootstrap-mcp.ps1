@@ -1,5 +1,5 @@
 # Install MCP package deps for first-time clone / local plugin install (Windows PowerShell).
-# Required before discord-fleet-status / discord-fleet-manage can start.
+# Required before the discord-fleet MCP server can start (one package: mcp/discord-fleet).
 #
 # Usage (from plugin root or anywhere):
 #   powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap-mcp.ps1
@@ -32,23 +32,22 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
 $npmExe = Resolve-Npm
 Write-Host "bootstrap-mcp: using $npmExe"
 
-foreach ($pkg in @('status', 'manage')) {
-  $dir = Join-Path $Root "mcp\$pkg"
-  $pkgJson = Join-Path $dir 'package.json'
-  if (-not (Test-Path -LiteralPath $pkgJson)) {
-    Write-Error "bootstrap-mcp: missing $pkgJson"
-    exit 1
+$pkg = 'discord-fleet'
+$dir = Join-Path $Root "mcp\$pkg"
+$pkgJson = Join-Path $dir 'package.json'
+if (-not (Test-Path -LiteralPath $pkgJson)) {
+  Write-Error "bootstrap-mcp: missing $pkgJson"
+  exit 1
+}
+Write-Host "bootstrap-mcp: npm ci in mcp/$pkg"
+Push-Location -LiteralPath $dir
+try {
+  & $npmExe ci
+  if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
   }
-  Write-Host "bootstrap-mcp: npm ci in mcp/$pkg"
-  Push-Location -LiteralPath $dir
-  try {
-    & $npmExe ci
-    if ($LASTEXITCODE -ne 0) {
-      exit $LASTEXITCODE
-    }
-  } finally {
-    Pop-Location
-  }
+} finally {
+  Pop-Location
 }
 
 Write-Host 'bootstrap-mcp: done'

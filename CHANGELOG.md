@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.33
+
+- **One MCP server.** The two stdio servers `discord-fleet-status` and `discord-fleet-manage` are merged into a single server, `discord-fleet` (`mcp/discord-fleet`), with all 16 tools. Tool names and arguments are unchanged, so skills and prompts that call tools by name keep working. One `npm ci`, one entry in `.mcp.json` (Grok Build) and `mcp.json` (Cursor), env vars merged.
+- **Read-only mode.** New optional plugin variable / env `DISCORD_FLEET_READ_ONLY` (`1` / `true` / `yes` / `on`). When on, `tools/list` hides every Discord write/moderation tool (`post_channel_message`, `timeout_member`, `kick_member`, `ban_member`, `unban_member`, `delete_message`, `purge_channel_messages`) and calls to them are refused with no Discord call. `describe_manage_boundary` reports `readOnly`. The `confirm=true` gate on every write tool is unchanged.
+- Tests: `npm test` in `mcp/discord-fleet` checks the tool list in both modes (unit) and starts the server over stdio to check `tools/list`, dry-run writes, and read-only refusals. `npm run build` / `npm run typecheck` run `tsc`.
+- Bootstrap scripts (`bootstrap-mcp.sh`, `bootstrap-mcp.ps1`) install the one package. Upgrading: run bootstrap once, then reload MCP servers or restart the host so it drops the two old servers.
+- README (layout, install, handshake troubleshooting, variables table, new **Read-only mode** section, tool list), skills (`discord-fleet-status`, `discord-fleet-manage`, `discord-fleet-boundary`, `discord-fleet-bridge-setup`), manifest descriptions + keywords updated.
+- Bump manifests, MCP package, serverInfo, and Discord User-Agent to `0.3.33`.
+
 ## 0.3.32
 
 - Logo: remove a stray internal design comment from `assets/logo.svg` (no visual change).

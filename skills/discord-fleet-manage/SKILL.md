@@ -13,7 +13,7 @@ Planning channel bindings or running confirm-gated Discord REST manage actions (
 
 1. Confirm boundary (`discord-fleet-boundary`) — manage/status here; wake config only on the bridge.
 2. Confirm Discord bot permissions (README **Discord bot permissions** / **Discord bot token & invite**) — messaging bits for inspect/history/post; **Moderate Members** / **Kick** / **Ban** / **Manage Messages** + role hierarchy for moderation tools.
-3. Call MCP server `discord-fleet-manage`:
+3. Call MCP server `discord-fleet` (one server for status + manage; older installs called it `discord-fleet-manage`, same tool names). If `DISCORD_FLEET_READ_ONLY` is on, the write tools (`post_channel_message`, `timeout_member`, `kick_member`, `ban_member`, `unban_member`, `delete_message`, `purge_channel_messages`) are hidden and refused; say so instead of retrying, and the operator can unset it and reload MCP servers. `describe_manage_boundary` reports `readOnly`.
    - `describe_manage_boundary` — refresh: this plugin does not wake bots / call sendPrompt; lists tool policy.
    - `plan_channel_binding` — optional `agentAlias` / `agentId` / `channelId` / `label` / `requireMention`; returns a dry-run draft map row. No Discord API calls.
    - `inspect_guild` — Discord REST snapshot; **requires `confirm=true`** and `DISCORD_BOT_TOKEN`.

@@ -9,6 +9,7 @@ No secrets in this file.
 
 ## Done
 
+- Single MCP server (0.3.33): `discord-fleet` holds all status + manage tools; `DISCORD_FLEET_READ_ONLY=1` hides write/moderation tools.
 - Manage MCP action slice (0.3.22): list_channel_messages, post_channel_message, check_bot_channel_permissions (confirm-gated; no wake).
 - Manage MCP moderation slice (0.3.23): timeout/kick/ban/unban/delete/purge + README Discord bot permissions (confirm-gated; no wake).
 

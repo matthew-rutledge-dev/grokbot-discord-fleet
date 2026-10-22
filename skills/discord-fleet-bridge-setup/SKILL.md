@@ -93,7 +93,7 @@ Discord DMs are channels; there is **no** `send_dm` tool in this plugin. Use pla
 3. **Env: prefer plugin vars / vault → runtime** — Load bot token and related secrets from plugin variables or the host vault injection into process env. Discourage writing a long-lived plaintext `.env` when avoidable. If the bridge docs require a host `.env`, use `.env.example` names only; never commit real `.env` or echo secret values.
 4. **Deploy / run** — Start or update per bridge README (Compose / process on **their** host). Keep service stopped until a real token is configured if the bridge docs say so.
 5. **Verify health** — Bridge HTTP is usually loopback-only. On the host: `GET http://127.0.0.1:18083/healthz` (or the port in bridge docs). From a laptop, open an SSH tunnel first, then probe the tunneled URL. Expect liveness / `discordReady` fields from bridge docs — treat missing token or stopped Compose as evidence, not failure to invent.
-6. **Point the plugin at health** — Set plugin variable / env `DISCORD_BRIDGE_HEALTH_URL` to the full `/healthz` URL. Status MCP can then probe; still no wake from this plugin. Inbound wakes are exactly `d:<slug>:<msgId>` (DMs: slug default `dm`, `g` null), thin JSON `{id,g,u,map}` with optional `a:` CDN refs, then human content (attachment-only OK); see skill `discord-bridge-dual-deliver` for bot-side decode — never put hop codes in Discord replies; fetch CDN URLs promptly. Outbound `/callback` may include `attachments` or multipart files (limits/MIME above). If enabling DMs, set **your** `security.dm.defaultAgentId` + policy/allowFrom on the bridge.
+6. **Point the plugin at health** — Set plugin variable / env `DISCORD_BRIDGE_HEALTH_URL` to the full `/healthz` URL. The `discord-fleet` MCP `fleet_health` tool can then probe; still no wake from this plugin. Inbound wakes are exactly `d:<slug>:<msgId>` (DMs: slug default `dm`, `g` null), thin JSON `{id,g,u,map}` with optional `a:` CDN refs, then human content (attachment-only OK); see skill `discord-bridge-dual-deliver` for bot-side decode — never put hop codes in Discord replies; fetch CDN URLs promptly. Outbound `/callback` may include `attachments` or multipart files (limits/MIME above). If enabling DMs, set **your** `security.dm.defaultAgentId` + policy/allowFrom on the bridge.
 7. **Ownership** — Marketplace: user owns their bridge, guild, credentials, and deploy path; do not take over another operator's host from this plugin.
 
 ## Evidence expected
@@ -114,10 +114,10 @@ Right after callback setup, run skill **`discord-wake-on-sleep`**. **Why:** Grok
 
 ## Related
 
-- **Plugin MCP deps (if you also cloned this plugin):** run `./scripts/bootstrap-mcp.sh` (Windows: `.\scripts\bootstrap-mcp.ps1`) in the plugin root before status/manage MCP will load — separate from bridge `npm ci`.
+- **Plugin MCP deps (if you also cloned this plugin):** run `./scripts/bootstrap-mcp.sh` (Windows: `.\scripts\bootstrap-mcp.ps1`) in the plugin root before the `discord-fleet` MCP server will load — separate from bridge `npm ci`.
 
 - Boundary: skill `discord-fleet-boundary`
-- After setup: skill `discord-fleet-status` + status MCP `fleet_health`
+- After setup: skill `discord-fleet-status` + `discord-fleet` MCP `fleet_health`
 - **Required for self-callback:** skill `discord-fleet-callback-setup`
 - **Recommended next:** skill `discord-wake-on-sleep` (Wake on sleep)
 - Wake decode + delivery: inbound is exactly `d:<slug>:<msgId>` (DM slug default `dm`; `g` may be `null`), thin JSON `{id,g,u,map,a?}`, then human content; skill `discord-bridge-dual-deliver` (encode for agent-to-agent context: `discord-fleet-hop-shorthand`) — Discord OUT is human text and/or allowed `/callback` attachments (same `/callback`; DMs send `userId`)
