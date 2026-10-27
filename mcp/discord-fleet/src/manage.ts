@@ -761,7 +761,7 @@ export async function handleManageTool(
           contentPreview: truncate(content, CONTENT_PREVIEW_MAX),
           contentLength: content.length,
         },
-        note: "Dry-run preview only. Re-call with confirm=true to POST the message. Not wake / not bridge /callback.",
+        note: "Dry-run preview only. Re-call with confirm=true to POST the message. Not wake / not bridge /discord/callback.",
       });
     }
 
@@ -784,7 +784,7 @@ export async function handleManageTool(
         contentPreview: truncate(created.content ?? content, CONTENT_PREVIEW_MAX),
         timestamp: created.timestamp ?? null,
       },
-      note: "Message created via Discord REST. This is not wake/sendPrompt and does not call bridge /callback.",
+      note: "Message created via Discord REST. This is not wake/sendPrompt and does not call bridge /discord/callback.",
     });
   }
 

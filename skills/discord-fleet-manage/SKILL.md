@@ -19,7 +19,7 @@ Planning channel bindings, Discord REST reads (no confirm), or confirm-gated Dis
    - `inspect_guild` — Discord REST snapshot; read-only, no confirm needed; needs `DISCORD_BOT_TOKEN`.
    - `resolve_channel` — Discord REST channel lookup; read-only, no confirm needed; needs token.
    - `list_channel_messages` — recent messages (limit max 50); read-only, no confirm needed.
-   - `post_channel_message` — create message; dry-run preview without `confirm=true`; **confirm=true** to send; refuses empty content; returns message id. Not bridge `/callback`.
+   - `post_channel_message` — create message; dry-run preview without `confirm=true`; **confirm=true** to send; refuses empty content; returns message id. Not bridge `/discord/callback`.
    - `check_bot_channel_permissions` — bot View/Send/History/Manage Messages (+ Kick/Ban/Moderate from guild roles); read-only, no confirm needed.
    - `timeout_member` — `guildId`, `userId`, `durationSeconds` (0 clears), optional `reason`; dry-run without confirm; **confirm=true** to apply.
    - `kick_member` / `ban_member` / `unban_member` — `guildId`, `userId`, optional `reason` (`ban_member` also `deleteMessageSeconds`); dry-run without confirm.

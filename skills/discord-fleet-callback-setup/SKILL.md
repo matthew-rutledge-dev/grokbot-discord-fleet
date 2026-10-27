@@ -21,7 +21,7 @@ If the Discord application / bot / invite are not set up yet, follow the plugin 
 
 - Do **not** run this skill silently on marketplace install or as a postinstall hook.
 - Do **not** paste tokens into chat. Use the secure secret card / Bot Secrets UI.
-- Do **not** commit secret values or real operator hostnames. Docs use placeholders only (e.g. `https://callback.example.com/callback`).
+- Do **not** commit secret values or real operator hostnames. Docs use placeholders only (e.g. `https://callback.example.com/discord/callback`).
 - Do **not** echo token values in evidence lines.
 - Do **not** auto-deploy the bridge from this skill.
 
