@@ -4,7 +4,7 @@ Plugin home for the **Discord fleet** MCP server (`discord-fleet`: status + mana
 
 **This is NOT the wake path.** Runtime wake (Gateway → `sendPrompt` / webhook) lives in a separate repo you may optionally self-host:
 
-- Bridge (optional, your machine): [matthew-rutledge-dev/grok-bot-discord-bridge](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge)
+- Host bridge (optional, your machine): a compatible self-hosted host bridge, for example `grok-bot-universal-bridge`'s Discord adapter (the reference host bridge). Wakes go Discord → host bridge → the Grok Bot Gateway (`sendPrompt` / webhook routine); this plugin is not on that path.
 
 **Marketplace installers use their own Discord and infrastructure.** Configure **your own** Discord bot token (and optional guild / self-hosted bridge URL) via plugin variables. Host vaults and deploy paths are specific to each installation — never a shared provider.
 
@@ -140,10 +140,10 @@ Declared in `.grok-plugin/plugin.json`, root `plugin.json`, and `.cursor-plugin/
 |------|----------|-------------|---------|
 | `DISCORD_BOT_TOKEN` | **Yes** (required product input) | **Each installer — their own bot** | Required for Discord REST status/manage tools (identity, reads, posts, permissions, and moderation). Get it from the [Discord Developer Portal](https://discord.com/developers/applications). **Never commit.** |
 | `DISCORD_GUILD_ID` | Optional | Your guild snowflake | Default guild for channel/guild status tools |
-| `DISCORD_BRIDGE_HEALTH_URL` | Optional | Your self-hosted bridge | Full URL to **your** bridge `GET /healthz` (e.g. `http://127.0.0.1:18083/healthz`) |
+| `DISCORD_BRIDGE_HEALTH_URL` | Optional | Your self-hosted bridge | Full URL to **your** bridge `GET /healthz` (e.g. `http://127.0.0.1:18090/healthz`) |
 | `DISCORD_FLEET_READ_ONLY` | Optional | You | Set to `1` (or `true` / `yes` / `on`) to hide every Discord write/moderation tool. Unset / empty / `0` / `false` / `no` / `off` = all tools; any other value also turns it **on** (fails closed, with a warning). See **[Read-only mode](#read-only-mode)** |
-| `DISCORD_BRIDGE_CALLBACK_TOKEN` | Optional | Your bridge `CALLBACK_TOKEN` | Bearer for **your** bridge `POST /callback` (agent self-callback / dual-deliver). Prefer Bot Secrets. **Never commit.** |
-| `DISCORD_BRIDGE_CALLBACK_URL` | Optional | Your bridge callback | Full callback URL or base ending in `/callback` (placeholder `https://callback.example.com/callback`). Never ship real operator hosts. |
+| `DISCORD_BRIDGE_CALLBACK_TOKEN` | Optional | The secret your bridge's Discord `callbackTokenRef` points at | Bearer for **your** bridge `POST /discord/callback` (agent self-callback / dual-deliver). Prefer Bot Secrets. **Never commit.** |
+| `DISCORD_BRIDGE_CALLBACK_URL` | Optional | Your bridge callback | Full callback URL (placeholder `https://callback.example.com/discord/callback`). Never ship real operator hosts. |
 
 ### Marketplace installers
 
@@ -171,11 +171,11 @@ Each marketplace installer creates **their own** Discord application and bot. Th
 2. **Copy the bot token** — Bot tab → **Reset Token** / **Copy**. Set it as plugin variable / Bot Secret / env **`DISCORD_BOT_TOKEN`**. Prefer vault → runtime env. Never commit; never paste in chat.
 3. **Privileged Gateway Intents** (Portal → Bot → Privileged Gateway Intents) — match what you will run:
    - **This plugin alone** (Discord REST status/manage MCP) — **no** privileged gateway intents required (HTTP REST with the bot token only; this plugin does not open a Discord Gateway).
-   - **Optional self-hosted wake bridge** (`matthew-rutledge-dev/grok-bot-discord-bridge`) — enable intents the bridge uses: **Message Content Intent** (privileged; required to read guild/DM message bodies for wake), plus non-privileged **Guilds**, **Guild Messages**, **Direct Messages** (DM wake) and **Guild Voice States** (non-privileged; the bridge requests it for its voice-channel play/stream features). See bridge README / skill `discord-fleet-bridge-setup`.
+   - **Optional self-hosted host bridge** (for example `grok-bot-universal-bridge`'s Discord adapter) — enable intents the bridge uses: **Message Content Intent** (privileged; required to read guild/DM message bodies for wake), plus non-privileged **Guilds**, **Guild Messages**, **Direct Messages** (DM wake) and **Guild Voice States** (non-privileged; the bridge requests it for its voice-channel play/stream features). See your host bridge's docs / skill `discord-fleet-bridge-setup`.
 4. **Invite the bot to your guild** — Portal → OAuth2 → **URL Generator**: scope **`bot`**; select the permissions in **[Discord bot permissions](#discord-bot-permissions)** below (messaging minimum, plus moderation if you will use the timeout/kick/ban/delete/purge tools). Open the generated URL while logged into Discord, select **your** guild, authorize. **Creating a token does not grant channel access by itself** — see permissions section (role + channel overwrites).
-5. **Optional plugin vars** — `DISCORD_GUILD_ID` (default guild snowflake for status/manage tools); `DISCORD_BRIDGE_HEALTH_URL` (full URL to **your** bridge `GET /healthz`, e.g. `http://127.0.0.1:18083/healthz`) when you self-host a bridge; `DISCORD_FLEET_READ_ONLY=1` to hide write/moderation tools.
-6. **Optional dual-deliver / self-callback** (separate self-hosted bridge) — file **`DISCORD_BRIDGE_CALLBACK_TOKEN`** + **`DISCORD_BRIDGE_CALLBACK_URL`** via secret cards (skill `discord-fleet-callback-setup`). Auth is **header-only** as of bridge **0.2.4+**: `Authorization: Bearer <token>` or header **`x-callback-token`**. Query `?token=` is **rejected (401)** — do not use.
-7. **Wake on sleep (recommended)** — after callback setup, run skill `discord-wake-on-sleep` (one webhook-triggered routine per Grok Bot account + bridge `SENDPROMPT_WAKE_URL` / `SENDPROMPT_WAKE_KEY`). Grok Bot computers sleep when idle and Discord alone can't wake them; without this, messages sent while asleep can red-X after the hold window. Skipping is allowed but not recommended.
+5. **Optional plugin vars** — `DISCORD_GUILD_ID` (default guild snowflake for status/manage tools); `DISCORD_BRIDGE_HEALTH_URL` (full URL to **your** bridge `GET /healthz`, e.g. `http://127.0.0.1:18090/healthz`) when you self-host a bridge; `DISCORD_FLEET_READ_ONLY=1` to hide write/moderation tools.
+6. **Optional dual-deliver / self-callback** (separate self-hosted bridge) — file **`DISCORD_BRIDGE_CALLBACK_TOKEN`** + **`DISCORD_BRIDGE_CALLBACK_URL`** via secret cards (skill `discord-fleet-callback-setup`). Callback path on the reference host bridge: `POST /discord/callback`. Auth is **header-only**: `Authorization: Bearer <token>` or header **`x-callback-token`**. Query `?token=` is **refused** (400 on the reference host bridge) — do not use. With no callback token configured on the bridge, the route answers **503** `callback_disabled`.
+7. **Wake on sleep (recommended)** — after callback setup, run skill `discord-wake-on-sleep` (one webhook-triggered routine per Grok Bot account + the bridge wake hook, `wake.urlRef` / `wake.keyRef`). Grok Bot computers sleep when idle and Discord alone can't wake them; without this, messages sent while asleep can red-X after the hold window. Skipping is allowed but not recommended.
 8. **Skills** — bot/bridge bring-up: `discord-fleet-bridge-setup`; callback secrets: `discord-fleet-callback-setup`; wake on sleep (recommended): `discord-wake-on-sleep`; wake decode (compact and legacy formats) / dual-deliver: `discord-bridge-dual-deliver` (a Discord wake loads only this skill); hop encode: `discord-fleet-hop-shorthand` (prefer `process.env.DISCORD_BRIDGE_CALLBACK_*` on each woken bot).
 
 ## Discord bot permissions
@@ -187,7 +187,7 @@ Token creation ≠ automatic access. The bot can only act where **(1)** the invi
 | Permission (URL Generator name) | Bit | Needed for |
 |---------------------------------|-----|------------|
 | **View Channel** (View Channels) | `1 << 10` (1024) | `inspect_guild`, `resolve_channel`, `list_channel_messages`, `post_channel_message`, wake bridge listen |
-| **Send Messages** | `1 << 11` (2048) | `post_channel_message`; optional bridge `/callback` replies |
+| **Send Messages** | `1 << 11` (2048) | `post_channel_message`; optional bridge callback replies |
 | **Read Message History** | `1 << 16` (65536) | `list_channel_messages`, `purge_channel_messages` (fetch), history before post |
 | **Attach Files** | `1 << 15` (32768) | Optional; bridge outbound attachments / rich replies |
 | **Embed Links** | `1 << 14` (16384) | Optional; embeds in posts |
@@ -234,7 +234,7 @@ All moderation manage tools still require **`confirm=true`** (dry-run preview wi
 | Endpoint | When | Purpose |
 |----------|------|---------|
 | `https://discord.com/api/v10/*` (Discord REST) | When `DISCORD_BOT_TOKEN` is set | Identity, guilds, channels; confirm-gated post / moderation via the manage tools |
-| Bridge `GET /healthz` at `DISCORD_BRIDGE_HEALTH_URL` | Optional (your bridge) | Liveness / `discordReady` probe — **not** wake / `sendPrompt` |
+| Bridge `GET /healthz` at `DISCORD_BRIDGE_HEALTH_URL` | Optional (your bridge) | Liveness probe (`{ok, adapters, held}` on the reference host bridge) — **not** wake / `sendPrompt` |
 
 Confirm-gated Discord REST from the manage tools may post / moderate (unless read-only mode is on) when you call tools with `confirm=true`. No channel-map writes, no gateway listen, no wake / `sendPrompt` from this plugin.
 
@@ -326,7 +326,7 @@ Grok Build loads this plugin from `~/.grok/plugins/grokbot-discord-fleet` on the
 
 ## Channel map example
 
-The live map stays on the bridge host. This plugin does not ship it. Fields below `requireMention` are optional. Values are placeholders.
+The live map stays on the bridge host. This plugin does not ship it. On the reference host bridge the same binding is a Discord adapter route (`id`, `enabled`, `match: {guild, channel}` or `{dm: "true"}`, `allowActors`, optional `allowGroups`, `agent` = a registry alias, `requireAddressed`, `slug`, optional `handler: "local-planner"`); `plan_channel_binding` still drafts the older channel-map row below, so translate it field by field. Fields below `requireMention` are optional. Values are placeholders.
 
 ```json
 {
@@ -349,25 +349,28 @@ Agent ids for a real roster belong in the operator's local roster file, not in t
 
 ## Bridge HTTP (reference — optional self-host)
 
-From bridge README / `http-server.ts` (read-only reference repo):
+From the reference host bridge (`grok-bot-universal-bridge`, Discord adapter README):
 
 | Path | Method | Purpose |
 |------|--------|---------|
-| `/healthz` | GET | Liveness + `discordReady` / `hasTokenConfigured` |
-| `/callback` | POST | Agent → Discord delivery (Bearer / `x-callback-token` with `CALLBACK_TOKEN`) — agents self-callback using `DISCORD_BRIDGE_CALLBACK_*` (skill `discord-fleet-callback-setup`); this plugin's MCP does not call `/callback` |
+| `/healthz` | GET | Liveness: `{ok, adapters, held}` (counts only; no Discord readiness field — check readiness on the host, e.g. its `--check` run) |
+| `/discord/callback` | POST | Agent → Discord delivery (Bearer / `x-callback-token`, the secret behind the Discord adapter's `callbackTokenRef`) — agents self-callback using `DISCORD_BRIDGE_CALLBACK_*` (skill `discord-fleet-callback-setup`); this plugin's MCP does not call it |
+| `/discord/voice/play`, `/discord/voice/stream` | POST | Optional voice features (off unless enabled on the bridge; same callback token) |
 
-Typical self-host listens loopback-only (`127.0.0.1:18083`). Point `DISCORD_BRIDGE_HEALTH_URL` at that URL (or a local SSH tunnel end).
+Typical self-host listens loopback-only (example `127.0.0.1:18090`). Point `DISCORD_BRIDGE_HEALTH_URL` at that URL (or a local SSH tunnel end). Behind a tunnel, route by path (`/discord/*`).
 
-### Outbound media (`POST /callback`)
+### Outbound media (`POST /discord/callback`)
 
-Auth is **header-only** (bridge **0.2.4+**): `Authorization: Bearer <token>` or **`x-callback-token`**. Query `?token=` alone / no auth / wrong Bearer → **401**. Text-only bodies remain valid. This plugin never calls `/callback`; document for installers' own bridge.
+Auth is **header-only**: `Authorization: Bearer <token>` or **`x-callback-token`**. No auth / wrong Bearer → **401**; `?token=` → **400**; no callback token configured on the bridge → **503** `callback_disabled`; over the soft rate limit → **429** with `retry-after`. Text-only bodies remain valid. This plugin never calls the callback; document for installers' own bridge.
 
 ### Local handler output
 
 When a bridge hop hands work to a local handler instead of `sendPrompt`, the hop must pass:
 
 - the real inbound Discord message id (the same id as `d:<slug>:<msgId>`), not a placeholder
-- the bridge callback URL (`CALLBACK_BASE_URL` + `CALLBACK_PATH`, or `DISCORD_BRIDGE_CALLBACK_URL`)
+- the bridge callback URL (`<publicBaseUrl>/discord/callback`, or `DISCORD_BRIDGE_CALLBACK_URL`)
+
+On the reference host bridge, a route with `"handler": "local-planner"` does this: it posts one "Working on it." message and passes `messageId`, `callbackUrl` and `statusMessageId` to the planner; the callback then edits that message.
 
 The handler POSTs the result (text and/or an image) to that URL. Auth is header-only: `Authorization: Bearer <token>` or `x-callback-token`. Do not put the callback token in the query string. Set `replyToMessageId` to the inbound message id and `channelId` to the hop's channel. A handler that is not given those two values can exit successfully and never post.
 
@@ -376,8 +379,10 @@ The handler POSTs the result (text and/or an image) to that URL. Auth is header-
 | Field | Notes |
 |-------|--------|
 | `channelId` | Required (guild or DM channel snowflake) |
-| `content` | Optional if ≥1 attachment |
+| `content` | Optional if ≥1 attachment (split at 2000 characters; max 8000) |
 | `replyToMessageId` | Optional |
+| `statusMessageId` | Optional; edit this bot message instead of posting |
+| `threadContent` | Optional (max 6000); starts a "Planner log" thread on the reply |
 | `attachments` | Optional, ≤10 items |
 
 Each attachment is **either** base64 inline **or** an https URL (XOR — not both):
@@ -390,21 +395,21 @@ Each attachment is **either** base64 inline **or** an https URL (XOR — not bot
 { "filename": "shot.png", "contentType": "image/png", "url": "https://cdn.example.com/shot.png" }
 ```
 
-**Multipart:** form fields `channelId`, optional `content`, optional `replyToMessageId`, plus files as `files` / `files[]`.
+JSON only: the reference host bridge does not accept multipart/form-data callbacks. A `url` item must be https: the bridge fetches it with a 15 s timeout, follows at most 3 redirects by hand (each hop re-checked), and refuses private, loopback and link-local targets.
 
-**Limits:** 8 MiB per file, 25 MiB total. **MIME allowlist (bridge `48e6b699ef39273d23f4bf70b7a4299989b34f9e`):** `application/gzip`, `application/javascript`, `application/json`, `application/msword`, `application/pdf`, `application/rtf`, `application/tar`, `application/vnd.rar`, `application/vnd.ms-excel`, `application/vnd.ms-powerpoint`, `application/vnd.oasis.opendocument.presentation`, `application/vnd.oasis.opendocument.spreadsheet`, `application/vnd.oasis.opendocument.text`, `application/vnd.openxmlformats-officedocument.presentationml.presentation`, `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, `application/zip`, `application/x-7z-compressed`, `application/x-gzip`, `application/x-gtar`, `application/x-powershell`, `application/x-python`, `application/x-rar-compressed`, `application/x-sh`, `application/x-tar`, `application/x-yaml`, `application/xml`, `audio/mpeg`, `audio/ogg`, `audio/wav`, `image/gif`, `image/jpeg`, `image/png`, `image/webp`, `text/css`, `text/csv`, `text/html`, `text/javascript`, `text/markdown`, `text/plain`, `text/tab-separated-values`, `text/x-powershell`, `text/x-python`, `text/x-shellscript`, `text/xml`, `text/yaml`, `video/mp4`, `video/webm`. When `contentType` is missing or `application/octet-stream`, filename fallback also recognizes the existing media/PDF/text mappings plus `.md`, `.json`, `.xml`, `.yml`, `.yaml`, `.py`, `.ps1`, `.sh`, `.bash`, `.csv`, `.tsv`, `.html`, `.css`, `.js`, `.ts` (mapped to `text/plain`), `.docx`, `.xlsx`, `.pptx`, `.doc`, `.xls`, `.ppt`, `.odt`, `.ods`, `.odp`, `.rtf`, `.zip`, `.tar`, `.gz`, `.tgz`, `.7z`, and `.rar` (`.zip` → `application/zip`, `.tar` → `application/x-tar` / `application/tar`, `.gz` and `.tar.gz` → `application/gzip`, `.tgz` → `application/x-gtar`, `.7z` → `application/x-7z-compressed`, `.rar` → `application/vnd.rar` / `application/x-rar-compressed`). Archives/executables/disk images (`.exe`, `.msi`, `.dmg`, `.iso`, `.appimage`) are otherwise denied; unsupported values return **415**.
+**Limits:** at most 10 files, 8 MiB per file, 25 MiB total, enforced while streaming (not only from `content-length`). **MIME allowlist (reference host bridge, Discord adapter):** `application/gzip`, `application/javascript`, `application/json`, `application/msword`, `application/pdf`, `application/rtf`, `application/tar`, `application/vnd.rar`, `application/vnd.ms-excel`, `application/vnd.ms-powerpoint`, `application/vnd.oasis.opendocument.presentation`, `application/vnd.oasis.opendocument.spreadsheet`, `application/vnd.oasis.opendocument.text`, `application/vnd.openxmlformats-officedocument.presentationml.presentation`, `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, `application/zip`, `application/x-7z-compressed`, `application/x-gzip`, `application/x-gtar`, `application/x-powershell`, `application/x-python`, `application/x-rar-compressed`, `application/x-sh`, `application/x-tar`, `application/x-yaml`, `application/xml`, `audio/mpeg`, `audio/ogg`, `audio/wav`, `image/gif`, `image/jpeg`, `image/png`, `image/webp`, `text/css`, `text/csv`, `text/html`, `text/javascript`, `text/markdown`, `text/plain`, `text/tab-separated-values`, `text/x-powershell`, `text/x-python`, `text/x-shellscript`, `text/xml`, `text/yaml`, `video/mp4`, `video/webm`. When `contentType` is missing or `application/octet-stream`, filename fallback also recognizes the existing media/PDF/text mappings plus `.md`, `.json`, `.xml`, `.yml`, `.yaml`, `.py`, `.ps1`, `.sh`, `.bash`, `.csv`, `.tsv`, `.html`, `.css`, `.js`, `.ts` (mapped to `text/plain`), `.docx`, `.xlsx`, `.pptx`, `.doc`, `.xls`, `.ppt`, `.odt`, `.ods`, `.odp`, `.rtf`, `.zip`, `.tar`, `.gz`, `.tgz`, `.7z`, and `.rar` (`.zip` → `application/zip`, `.tar` → `application/x-tar` / `application/tar`, `.gz` and `.tar.gz` → `application/gzip`, `.tgz` → `application/x-gtar`, `.7z` → `application/x-7z-compressed`, `.rar` → `application/vnd.rar` / `application/x-rar-compressed`). Filenames ending in `.exe`, `.msi`, `.dmg`, `.iso`, `.appimage`, `.bat`, `.cmd`, `.scr` or `.com` are refused whatever MIME type is claimed; any type outside the allowlist returns **415** `unsupported_media_type`.
 
-**Error codes (bridge):** `content_or_attachment_required`, `attachment_too_large`, `too_many_attachments`, `unsupported_media_type`, `attachment_fetch_failed`.
+**Error codes (bridge):** `channelId required`, `content_or_attachment_required`, `channel_not_allowlisted` (403), `unsupported_media_type` (415), `attachment_too_large`, `too_many_attachments`, `invalid_attachment`, `invalid_attachment_url` (400), `attachment_fetch_failed`, `discord_send_failed` (502).
 
-### Bridge hop timing (host-side telemetry)
+### Bridge audit (host-side)
 
-A self-hosted bridge may emit one host-log `[timing] key=val …` line per stage for hop-latency diagnosis. Stages are `authz`, `build_wake`, `sendPrompt`, `callback_auth`, `callback_resolve`, `callback_deliver`, and `callback_total`. Fields include `stage`, `msg`, `hop=d:<slug>:<id>`, `ms`, `ok`, `attachments`, `chunks`, and optional `idle_ms` (from `sendPrompt` acceptance to callback via `replyToMessageId`). Timing lines contain no tokens or content. These logs belong to the bridge host, not this marketplace MCP; agents should not invent timings. Callback caps/MIME are unchanged.
+The reference host bridge writes a JSONL audit line per decision (inbound allow/deny, hold, retry, deliver, give_up, callback, attachment). Ids are masked to their last 4 characters, attachment lines carry only count, total bytes and kinds, and message text, URLs and keys are never written. These logs belong to the bridge host, not this marketplace MCP; agents should not invent timings.
 
 Never put hop codes (`d:…`) or thin JSON into Discord replies — human text and/or allowed attachments only.
 
 ### Inbound media (wake)
 
-On **your** bridge, thin JSON after `d:<slug>:<msgId>` may include optional:
+On **your** bridge, inbound attachments are never downloaded by the bridge: up to 10 Discord CDN URLs go in the compact trailer as repeated `a=<url>` keys and in `sendPrompt` / webhook `metadata.attachments`. Older host bridges' legacy thin JSON after `d:<slug>:<msgId>` may include optional:
 
 ```json
 "a": [{ "url": "https://cdn.discordapp.com/…", "filename": "shot.png", "contentType": "image/png", "size": 12345 }]
@@ -416,20 +421,22 @@ These are Discord CDN **URL refs** (not base64). The same refs may appear on `se
 
 Wake DMs are handled by **your** optional self-hosted bridge (not this plugin). Summary for installers:
 
-1. **Inbound** — Bridge needs `DirectMessages` intent; `security.dm.policy` is `pairing` | `allowlist` | `disabled`; combine `security.dm.allowFrom` with env allowlists; owner runs `!pair <userId>` under pairing; `ignoreBots` applies.
-2. **Agent** — Set `security.dm.defaultAgentId` on **your** bridge `security.json`, or DMs deny as `dm_no_agent`. Guild channel-map rows do **not** route DMs.
-3. **Outbound** — Same `POST /callback` as guild: `{channelId, content?, agentId?, replyToMessageId?, attachments?}`. Send `userId` (thin-JSON `u`) and omit `channelId`; the bridge opens the DM for allowlisted users (a DM channel snowflake as `channelId` also works). There is **no** separate `send_dm` MCP in this plugin.
-4. **Hop** — Guild wakes use `d:<channel-slug>:<msgId>`; DMs use the same shape with slug default `dm` (or `security.dm.slug`), and thin JSON `g` is `null` (optional `a:` for media). Strip `d:` + JSON from visible chat; Discord OUT is human text and/or allowed attachments — never hop codes. See skill `discord-bridge-dual-deliver`.
+1. **Inbound** — Bridge needs the `DirectMessages` intent. On the reference host bridge DMs match a route with `match: {"dm": "true"}` (off unless enabled) and its `allowActors` list (deny by default: an empty list allows nobody); `ignoreBots` applies.
+2. **Agent** — The DM route's `agent` (a registry alias) receives the wake. Guild routes do **not** route DMs.
+3. **Outbound** — Same `POST /discord/callback` as guild: `{channelId, content?, replyToMessageId?, attachments?}` with `channelId` = the trailer's `c` (the DM channel, which already passed the allowlist; the bridge remembers it across restarts). The reference host bridge has no `userId` (open-a-DM) callback. There is **no** separate `send_dm` MCP in this plugin.
+4. **Hop** — Guild wakes use `d:<channel-slug>:<msgId>`; DMs use the same shape with the DM route's slug (usually `dm`); the compact trailer has no `g` (legacy thin JSON `g` is `null`); optional `a` for media. Strip `d:` + JSON from visible chat; Discord OUT is human text and/or allowed attachments — never hop codes. See skill `discord-bridge-dual-deliver`.
 
-Marketplace installers edit **their** bridge `security.json` (`dm.allowFrom`, `dm.defaultAgentId`, policy). Plugin variables are `DISCORD_BOT_TOKEN` / optional guild / health URL / optional callback token+URL — do not ship another operator's agent IDs, guild snowflakes, or real callback hosts as product defaults.
+Marketplace installers edit **their** bridge's Discord routes (DM route `enabled`, `allowActors`, `agent`). Plugin variables are `DISCORD_BOT_TOKEN` / optional guild / health URL / optional callback token+URL — do not ship another operator's agent IDs, guild snowflakes, or real callback hosts as product defaults.
 
 ### Optional durable Cloudflare tunnel
 
 Quick `trycloudflare.com` tunnels are temporary and stop when their `cloudflared` process stops. For durable self-hosted wake, use a named Cloudflare Tunnel with a supervised connector and your own public hostnames, for example:
 
 ```text
-CALLBACK_BASE_URL=https://callback.example.com
-GROK_BOT_SENDPROMPT_URL=https://sendprompt.example.com
+# host bridge config: http.publicBaseUrl (callback = <publicBaseUrl>/discord/callback)
+https://callback.example.com
+# registry entry deliver.urlRef → your Gateway sendPrompt / webhook endpoint
+https://sendprompt.example.com
 ```
 
 ### Durable sendPrompt tunnel (Grok Bot computer)
@@ -466,34 +473,36 @@ export SENDPROMPT_CONNECTOR_MATCH=example-tunnel                    # substring 
 
 Then `scripts/ensure-sendprompt-tunnel.sh` starts the supervisor and watchdog if they're down (see **sendPrompt tunnel watchdog**). Run it from startup and from the wake routine.
 
-Keep the bridge loopback-only behind the tunnel, rotate `CALLBACK_TOKEN`, and keep secrets in the host vault/runtime environment. The tunnel itself is yours to run (setup above); this plugin only ships the ensure/watchdog scripts. For `/healthz`, keep using the existing loopback binding and SSH tunnel workflow rather than exposing the bridge port.
+Keep the bridge loopback-only behind the tunnel, rotate the callback token (the secret behind `callbackTokenRef`), and keep secrets in the host vault/runtime environment. The tunnel itself is yours to run (setup above); this plugin only ships the ensure/watchdog scripts. For `/healthz`, keep using the existing loopback binding and SSH tunnel workflow rather than exposing the bridge port.
 
 ## Bridge operator notes (generic)
 
-- **User-Agent:** callbacks must send a non-default User-Agent (e.g. `grok-bot-discord-bridge-client/1.0`). Default library UAs can be rejected at the edge with Cloudflare **1010** before reaching the bridge, so the bridge logs nothing.
-- **DM replies:** send `userId` and omit `channelId`. Sending neither returns `400 channelId_required`.
+- **User-Agent:** callbacks must send a non-default User-Agent (e.g. `grok-bot-bridge-client/1.0`). Default library UAs can be rejected at the edge with Cloudflare **1010** before reaching the bridge, so the bridge logs nothing.
+- **DM replies:** send `channelId` = the trailer's `c` (the DM channel). Without a valid `channelId` the reference host bridge returns `400 channelId required`.
 - **Wake hop JSON:** `c` (channel ID) is optional and may be present for DMs too; decoders must accept the hop with or without it.
 
 | Symptom | Meaning |
 |---|---|
 | 1010 | Edge blocked the request (usually the User-Agent) |
 | 401 | Bad or missing Bearer; the hop did reach the origin |
-| 400 `channelId_required` | Neither `channelId` nor `userId` sent |
-| 502 / 1033 | sendPrompt tunnel is down |
+| 400 | `?token=` used, or no valid `channelId` |
+| 404 | Wrong path (use `/discord/callback`) or the Discord adapter is off |
+| 503 `callback_disabled` | No callback token configured on the bridge |
+| 502 / 1033 (edge page) | The tunnel in front of the bridge host is down |
 
 - **Tunnel connector:** it does not come back on its own after a host restart; run `scripts/ensure-sendprompt-tunnel.sh` from startup. On networks that block UDP, run the connector with `--protocol http2` (QUIC won't connect). The watchdog restarts the connector and checks the public URL.
-- **Deploy:** exclude the runtime `security.json`, `channel-map.json` and `.env` from the rsync; back them up first and compare checksums after. Configs are bind-mounted read-only and root-owned. Never run `docker compose config` where logs are shared: it expands secrets.
+- **Deploy:** keep the host-only files (bridge and adapter configs, `registry.json`, `.env`) in a sibling directory outside the checkout (e.g. `<repo>-host/`) so `git pull` and the Docker build context never touch them; back them up first and compare checksums after. Configs are bind-mounted read-only and owned by the service user. Script `docker compose run` / `exec` with `-T`. Never run `docker compose config` where logs are shared: it expands secrets.
 
 ## Wake on sleep (recommended)
 
 Standard setup step, right after bridge setup and callback setup. **Why:** Grok Bot computers sleep a lot when idle, and Discord messages alone can't wake them. Without this step, messages sent while the bot is asleep can fail after the bridge's hold window (shown as a red X in Discord). Skipping is allowed but **not recommended**.
 
-Bridge side: requires bridge **>= 0.2.12**; see the [bridge README wake section](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge#sendprompt-wake-hook-optional-0212).
+Bridge side: the reference host bridge's core wake hook (`wake.urlRef` / `wake.keyRef` / `wake.header` in its bridge config; see its design notes, **Wake-on-sleep**).
 
 Grok Bot boxes hibernate. While asleep the sendPrompt tunnel is down, so the bridge holds Discord messages and then red-Xes them after its hold window. The bridge's wake hook fixes this:
 
-1. sendPrompt hits a retryable tunnel error (530, 1033, 502–504, or a network error).
-2. The bridge POSTs **once per outage** to a Grok Bot **webhook-triggered routine** (debounced until the next successful sendPrompt).
+1. Delivery hits a retryable error (502/503/504/530, Cloudflare 1033, a timeout or a network error) and the message is held.
+2. On the first hold of an outage the bridge POSTs **once** to a Grok Bot **webhook-triggered routine** (re-armed after a successful delivery or when nothing is held; a failed wake never drops the hold).
 3. The routine wakes the box and runs `scripts/ensure-sendprompt-tunnel.sh`; the tunnel returns and held messages deliver.
 
 Set up the routine with the `discord-wake-on-sleep` skill: **one routine per Grok Bot account** (all bots on an account share one box), reused if it already exists. Never commit the URL, the key, or a real automation folder id.
@@ -502,30 +511,31 @@ Set up the routine with the `discord-wake-on-sleep` skill: **one routine per Gro
 
 1. The bot creates (or reuses) the routine. The routine panel has three fields: **POST URL**, **key**, and an **Authorization header** field.
 2. The bot gives you deep links to each field, taken from the routine's line in its automation status: `grokbot://app/v1/sidebar?target=webhook-url&automation=<folder id>`, plus `target=webhook-key` and `target=webhook-header`. Fallback: click the bot's name in the chat header (or press Cmd+Shift+I) and pick the routine under **Routines**.
-3. The bot asks for the **key** with a masked secret-request card. The value lands as a box env var (e.g. `SENDPROMPT_WAKE_KEY`); the bot never sees or prints it. You paste the **URL** in chat. It is not secret unless it embeds a token in its path; then treat it like the key.
-4. The bot, or whoever owns the bridge server, writes both into the bridge `.env` with a script that reads the env var (no echo), backs up `.env` first and keeps it out of deploy rsync, and sets `SENDPROMPT_HOLD_MAX_SEC=1800`. The script writes **in place** (`cat new > .env`, not `mv`) so the inode, owner and mode survive single-file bind mounts and root-owned read-only perms. Then recreate the bridge container with `docker compose up -d` (`docker restart` and `docker compose restart` do not re-read `env_file`). Hand-editing `.env` is only a fallback.
+3. The bot asks for the **key** with a masked secret-request card. The value lands as a box env var (e.g. `BRIDGE_WAKE_KEY`); the bot never sees or prints it. You paste the **URL** in chat. It is not secret unless it embeds a token in its path; then treat it like the key.
+4. The bot, or whoever owns the bridge server, writes both into the bridge `.env` (the env names its `wake.urlRef` / `wake.keyRef` point at, e.g. `BRIDGE_WAKE_URL` / `BRIDGE_WAKE_KEY`) with a script that reads the env var (no echo) and backs up `.env` first. Keep `hold.maxSec` at its default of 1800. The script writes **in place** (`cat new > .env`, not `mv`) so the inode, owner and mode survive single-file bind mounts and root-owned read-only perms. Then recreate the bridge container with `docker compose up -d` (`docker restart` and `docker compose restart` do not re-read `env_file`). Hand-editing `.env` is only a fallback.
 5. The default header, `Authorization: Bearer <key>`, is verified. A successful wake POST returns HTTP 200 with JSON `{success:true, runUuid}`.
 
-| Bridge env | Default | Meaning |
+| Bridge config | Default | Meaning |
 |---|---|---|
-| `SENDPROMPT_WAKE_URL` | blank (off) | Routine webhook URL |
-| `SENDPROMPT_WAKE_KEY` | blank (off) | Routine sender key; sent only in a header, never in the body |
-| `SENDPROMPT_WAKE_HEADER` | `Authorization` | Header that carries the key. `Authorization` sends `Bearer <key>`; any other name sends the raw key (e.g. `X-Webhook-Key: <key>`). The default is verified against the Grok Bot routine webhook. |
-| `SENDPROMPT_HOLD_MAX_SEC` | `900` | How long the bridge holds messages before giving up; **1800 recommended** when the wake hook is set |
+| `wake.urlRef` | unset (off) | `env:NAME` / `file:/abs/path` ref to the routine webhook URL (e.g. `env:BRIDGE_WAKE_URL`); literal values are refused |
+| `wake.keyRef` | unset | Ref to the routine sender key (e.g. `env:BRIDGE_WAKE_KEY`); sent only in a header, never in the body |
+| `wake.header` | `Authorization` | Header that carries the key. `Authorization` sends `Bearer <key>`; any other name sends the raw key (e.g. `X-Webhook-Key: <key>`). The default is verified against the Grok Bot routine webhook. |
+| `wake.timeoutMs` | `5000` | Wake POST timeout |
+| `hold.maxSec` | `1800` | How long the bridge holds messages before giving up |
 
-POST body: `{reason, heldCount, firstHeldAt}` — no tokens, no message content. Env names match bridge >= 0.2.12 ([wake section](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge#sendprompt-wake-hook-optional-0212)).
+POST body: `{reason, heldCount, firstHeldAt}` — no tokens, no message content.
 
 On the Grok Bot computer: `SENDPROMPT_TUNNEL_URL` is **required**: `scripts/ensure-sendprompt-tunnel.sh` exits without it. Set it to the public URL of this computer's sendPrompt tunnel (e.g. `https://sendprompt.example.com/`) as a box env var / Bot Secret so the routine sees it. The routine prompt needs the **absolute** path to the plugin install; the desktop app keeps its own copy (see **Install locations**), so the skill resolves it once (`$GROK_PLUGIN_ROOT` or `find / -path '*/grokbot-discord-fleet/scripts/ensure-sendprompt-tunnel.sh'`) and writes it into the prompt.
 
 **End-to-end check:** DM the bot and get a reply. Optional sleep test: let the computer idle or hibernate, send a message, and confirm the wake routine ran and the reply arrived within the hold window.
 
-**Turn off:** blank `SENDPROMPT_WAKE_URL` / `SENDPROMPT_WAKE_KEY` and recreate the bridge container with `docker compose up -d` (`docker restart` and `docker compose restart` do not re-read `env_file`), or pause the routine.
+**Turn off:** blank `BRIDGE_WAKE_URL` / `BRIDGE_WAKE_KEY` (or remove `wake.urlRef`) and recreate the bridge container with `docker compose up -d` (`docker restart` and `docker compose restart` do not re-read `env_file`), or pause the routine.
 
 **Troubleshooting**
 
-- *Messages still red-X:* the box takes longer to wake + reconnect than `SENDPROMPT_HOLD_MAX_SEC`; raise it (1800 recommended), and check the routine actually ran.
-- *Routine never runs:* a good wake POST returns HTTP 200 with JSON `{success:true, runUuid}`. If it doesn't, the wake URL/key is blank or mistyped, `SENDPROMPT_WAKE_HEADER` was changed from the default `Authorization` (unset it), or the routine is paused.
-- *Fires only once:* expected — one POST per outage until a sendPrompt succeeds.
+- *Messages still red-X:* the box takes longer to wake + reconnect than `hold.maxSec`; keep it at least 1800, and check the routine actually ran.
+- *Routine never runs:* a good wake POST returns HTTP 200 with JSON `{success:true, runUuid}`. If it doesn't, the wake URL/key is blank or mistyped, `wake.header` was changed from the default `Authorization` (unset it), or the routine is paused.
+- *Fires only once:* expected — one POST per outage until a delivery succeeds or nothing is held.
 - *Routine runs but tunnel stays down:* the ensure script can't find its tunnel URL / connector settings (`SENDPROMPT_TUNNEL_URL` is required and must be visible to the routine); check the `ensure-sendprompt-tunnel` status line and see **sendPrompt tunnel watchdog** below.
 - *Duplicate routines:* delete extras; one per account is enough.
 
@@ -537,7 +547,7 @@ On the Grok Bot computer: `SENDPROMPT_TUNNEL_URL` is **required**: `scripts/ensu
 - `discord-fleet-bridge-setup` — **operator-driven** optional wake-bridge setup on an explicit ask (clone/deploy/verify `/healthz` on **your** host; never silent postinstall; never `curl|bash`; prefer plugin vars / vault→runtime env over plaintext `.env`). After the bridge is up, run `discord-fleet-callback-setup` for agent self-callback, then `discord-wake-on-sleep` (recommended). Skill includes short **Windows vs Linux** notes.
 - `discord-fleet-callback-setup` — **first-class** operator-driven setup for durable `DISCORD_BRIDGE_CALLBACK_TOKEN` + `DISCORD_BRIDGE_CALLBACK_URL` (secure secret card; verify present/missing only; safe curl smoke; per-bot Secrets for multi-agent fleets). Not silent postinstall.
 - `discord-wake-on-sleep` — **recommended** setup step right after callback setup: one webhook-triggered routine per Grok Bot account (idempotent) that runs `scripts/ensure-sendprompt-tunnel.sh` when the bridge wake hook fires; key collected by masked secret card (bot never sees it), URL pasted in chat, no-echo `.env` write
-- `discord-bridge-dual-deliver` — the only skill a Discord wake loads (~2 KB): decode the legacy `d:<slug>:<msgId>` + thin JSON `{id,g,u,un?,dn?,lb?,c?,map,a?}` wake and the bridge 0.2.14 compact wake (`Discord DM from <label>: <text>` / `Discord #<channel> from <label>: <text>` + last-line trailer `⟂ d:<slug>:<msgId> u=… c=… …`), show only human content in Grok chat, then self-callback `POST /callback` with `DISCORD_BRIDGE_CALLBACK_*`, `Authorization: Bearer` / `x-callback-token`, a non-default User-Agent, channel `channelId` vs DM `userId`; short error table. Full envelope spec, MIME list, timing, setup and ops live in its `reference.md`, read only on errors or setup
+- `discord-bridge-dual-deliver` — the only skill a Discord wake loads (~2 KB): decode the compact wake (the reference host bridge's only format) and the legacy `d:<slug>:<msgId>` + thin JSON `{id,g,u,un?,dn?,lb?,c?,map,a?}` wake from older host bridges (`Discord DM from <label>: <text>` / `Discord #<channel> from <label>: <text>` + last-line trailer `⟂ d:<slug>:<msgId> u=… c=… …`), show only human content in Grok chat, then self-callback `POST /discord/callback` with `DISCORD_BRIDGE_CALLBACK_*`, `Authorization: Bearer` / `x-callback-token`, a non-default User-Agent, `channelId` = trailer `c` (guild and DM); short error table. Full envelope spec, MIME list, audit, setup and ops live in its `reference.md`, read only on errors or setup
 - `discord-fleet-hop-shorthand` — encode only: pass `d:<slug>:<msgId>` (optional thin JSON) in agent-to-agent context; never in Discord or visible chat
 
 ## Submit to Cursor Marketplace (optional)

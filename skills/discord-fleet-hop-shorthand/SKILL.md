@@ -25,4 +25,4 @@ Placeholders only in docs/examples (`example-chat`, fake snowflakes). No real op
 - Boundary: skill `discord-fleet-boundary`
 - Bridge setup / channel-map: skill `discord-fleet-bridge-setup`
 - Callback token/URL setup: skill `discord-fleet-callback-setup`
-- Bridge SoT: [matthew-rutledge-dev/grok-bot-discord-bridge](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge)
+- Reference host bridge: `grok-bot-universal-bridge` (Discord adapter), or any compatible host bridge

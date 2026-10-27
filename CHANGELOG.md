@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.34
+
+- **Host bridge pointer.** Docs, skills, manifest variable descriptions and the MCP's informational `bridgeRepo` / wake-path strings now name the reference host bridge as `grok-bot-universal-bridge` (its Discord adapter), or any compatible host bridge, instead of the previous named Discord bridge. No clickable link (that repo is not public). The wake path is unchanged: Discord → host bridge → Gateway `sendPrompt` / webhook routine; this plugin is not on it.
+- **Callback contract aligned with the reference host bridge:** path `POST /discord/callback` (example placeholder `https://callback.example.com/discord/callback`; a base URL gets `/discord/callback` appended); header-only auth (`Authorization: Bearer` or `x-callback-token`), `?token=` refused with 400, 503 `callback_disabled` when no callback token is configured, 429 `rate_limited` with `retry-after`; DM replies send `channelId` = the wake trailer's `c` (no `userId` callback); JSON only (no multipart); up to 10 files, 8 MiB each, 25 MiB total, enforced while streaming; `url` items https only with at most 3 re-checked redirects and no private/loopback/link-local targets; `.exe`/`.msi`/`.dmg`/`.iso`/`.appimage`/`.bat`/`.cmd`/`.scr`/`.com` refused whatever the MIME type; same MIME allowlist; full error table (`channel_not_allowlisted`, `invalid_attachment(_url)`, `discord_send_failed`, 404 wrong path). Optional `statusMessageId` / `threadContent` and the `local-planner` handler documented.
+- Wake docs: the reference host bridge sends the compact format only (legacy decode kept for older host bridges); compact header grammar fixed to `Discord #<channel> from <label>[ (N attachment[s])]: <text>`. DMs are a `{dm: "true"}` route with `allowActors` and an `agent`. `/healthz` is `{ok, adapters, held}` (example port 18090). Host timing lines replaced by the JSONL audit description.
+- Wake on sleep: bridge config `wake.urlRef` / `wake.keyRef` / `wake.header` / `wake.timeoutMs` and `hold.maxSec` (default 1800) replace the old `SENDPROMPT_WAKE_*` / `SENDPROMPT_HOLD_MAX_SEC` env table; the no-echo `.env` writer uses `BRIDGE_WAKE_URL` / `BRIDGE_WAKE_KEY`. Box-side `SENDPROMPT_TUNNEL_URL` and the tunnel scripts are unchanged.
+- Callback-setup smoke probe sends an explicit User-Agent and maps 503 / 404 / 1010.
+- No tool behavior changes. Bump manifests, MCP package, serverInfo, and Discord User-Agent to `0.3.34`.
+
 ## 0.3.33
 
 - **One MCP server.** The two stdio servers `discord-fleet-status` and `discord-fleet-manage` are merged into a single server, `discord-fleet` (`mcp/discord-fleet`), with all 16 tools. Tool names and arguments are unchanged, so skills and prompts that call tools by name keep working. One `npm ci`, one entry in `.mcp.json` (Grok Build) and `mcp.json` (Cursor), env vars merged.

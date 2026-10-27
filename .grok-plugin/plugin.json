@@ -1,6 +1,6 @@
 {
   "name": "grokbot-discord-fleet",
-  "version": "0.3.33",
+  "version": "0.3.34",
   "description": "Discord fleet MCP (one discord-fleet server: status + manage tools, optional DISCORD_FLEET_READ_ONLY mode) + skills. Discord REST + optional self-hosted bridge /healthz. Each installer uses their own bot token \u2014 not shared provider infra. Not the wake bridge.",
   "author": {
     "name": "Matthew Rutledge",
@@ -37,17 +37,17 @@
       "DISCORD_BRIDGE_HEALTH_URL": {
         "type": "string",
         "title": "Bridge health URL",
-        "description": "Optional. Full URL to YOUR self-hosted wake-bridge GET /healthz (e.g. http://127.0.0.1:18083/healthz). Omit if you are not running a bridge."
+        "description": "Optional. Full URL to YOUR self-hosted host bridge GET /healthz (e.g. http://127.0.0.1:18090/healthz). Omit if you are not running a bridge."
       },
       "DISCORD_BRIDGE_CALLBACK_TOKEN": {
         "type": "string",
         "title": "Bridge callback token",
-        "description": "Optional. Bearer token for YOUR bridge POST /callback (same secret as bridge CALLBACK_TOKEN). Used for agent self-callback / dual-deliver without a host vault hop. Never commit."
+        "description": "Optional. Bearer token for YOUR host bridge POST /discord/callback (same secret as the bridge Discord adapter callbackTokenRef). Used for agent self-callback / dual-deliver without a host vault hop. Never commit."
       },
       "DISCORD_BRIDGE_CALLBACK_URL": {
         "type": "string",
         "title": "Bridge callback URL",
-        "description": "Optional. Full callback URL or base ending in /callback for YOUR bridge (placeholder example https://callback.example.com/callback). Never ship real operator hosts."
+        "description": "Optional. Full callback URL for YOUR host bridge (placeholder example https://callback.example.com/discord/callback). Never ship real operator hosts."
       },
       "DISCORD_FLEET_READ_ONLY": {
         "type": "string",

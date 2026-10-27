@@ -27,7 +27,7 @@ Planning channel bindings, Discord REST reads (no confirm), or confirm-gated Dis
    - `purge_channel_messages` — `channelId` + `limit` and/or `messageIds` (cap 100); bulk-delete when Discord allows; dry-run without confirm.
    - `evaluate_bridge_bot_enable` — `siteId`, optional `botsEnabled` (omit = on), optional `sites` (`siteId` + `enabled`). Runs only when global is on AND that site is on. Does not write either store. No Discord call.
 4. Prefer `check_bot_channel_permissions` before posting, purging, or enabling a map row.
-5. For runtime wake / enabling map rows, point work at `grok-bot-discord-bridge` on the wake host only — do not put wake secrets in this plugin.
+5. For runtime wake / enabling routes, point work at the operator's host bridge (for example `grok-bot-universal-bridge`'s Discord adapter) on the wake host only — do not put wake secrets in this plugin.
 
 ## Evidence expected
 
