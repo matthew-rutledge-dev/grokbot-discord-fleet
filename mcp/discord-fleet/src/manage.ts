@@ -42,7 +42,7 @@ import { readEnv } from "./env.js";
 import { describeReadOnly, type ReadOnlyResolution } from "./readonly.js";
 import { SERVER_NAME, VERSION } from "./version.js";
 
-const BRIDGE_REPO = "matthew-rutledge-dev/grok-bot-discord-bridge";
+const BRIDGE_REPO = "grok-bot-universal-bridge (Discord adapter; reference host bridge) or any compatible host bridge";
 const WAKE_HOST_HINT =
   "Use your own host and deploy path for optional bridge setup; do not deploy from this plugin";
 const MSG_LIMIT_MAX = 50;
@@ -484,11 +484,11 @@ export async function handleManageTool(
       sendPrompt: false,
       gatewayListen: false,
       wakePath:
-        "Your gateway → sendPrompt/webhook via matthew-rutledge-dev/grok-bot-discord-bridge",
+        "Discord → your host bridge (e.g. grok-bot-universal-bridge Discord adapter) → Gateway sendPrompt/webhook",
       wakeHostHint: WAKE_HOST_HINT,
       bridgeHttp: {
-        healthz: "GET /healthz (liveness + discordReady)",
-        callback: "POST /callback (agent delivery — not this plugin)",
+        healthz: "GET /healthz (liveness: {ok, adapters, held})",
+        callback: "POST /discord/callback (agent delivery — not this plugin)",
       },
       managePolicy: {
         plan_channel_binding: "dry-run only",
@@ -578,7 +578,7 @@ export async function handleManageTool(
         "On bridge host only: add/edit config/channel-map.json row; leave the per-site enabled=false until ready",
         "Do not treat the row enabled flag as the global botsEnabled toggle — the two stores are independent (global defaults on when omitted)",
         "Set the per-site enabled=true only after DISCORD_BOT_TOKEN is live and Compose is intentionally started",
-        "Verify with bridge GET /healthz → discordReady: true (not this plugin)",
+        "Verify with bridge GET /healthz → adapters includes discord (not this plugin)",
       ],
       bridgeRepo: BRIDGE_REPO,
       wakeHostHint: WAKE_HOST_HINT,
@@ -761,7 +761,7 @@ export async function handleManageTool(
           contentPreview: truncate(content, CONTENT_PREVIEW_MAX),
           contentLength: content.length,
         },
-        note: "Dry-run preview only. Re-call with confirm=true to POST the message. Not wake / not bridge /callback.",
+        note: "Dry-run preview only. Re-call with confirm=true to POST the message. Not wake / not bridge /discord/callback.",
       });
     }
 
@@ -784,7 +784,7 @@ export async function handleManageTool(
         contentPreview: truncate(created.content ?? content, CONTENT_PREVIEW_MAX),
         timestamp: created.timestamp ?? null,
       },
-      note: "Message created via Discord REST. This is not wake/sendPrompt and does not call bridge /callback.",
+      note: "Message created via Discord REST. This is not wake/sendPrompt and does not call bridge /discord/callback.",
     });
   }
 

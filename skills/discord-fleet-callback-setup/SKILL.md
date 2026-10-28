@@ -21,7 +21,7 @@ If the Discord application / bot / invite are not set up yet, follow the plugin 
 
 - Do **not** run this skill silently on marketplace install or as a postinstall hook.
 - Do **not** paste tokens into chat. Use the secure secret card / Bot Secrets UI.
-- Do **not** commit secret values or real operator hostnames. Docs use placeholders only (e.g. `https://callback.example.com/callback`).
+- Do **not** commit secret values or real operator hostnames. Docs use placeholders only (e.g. `https://callback.example.com/discord/callback`).
 - Do **not** echo token values in evidence lines.
 - Do **not** auto-deploy the bridge from this skill.
 
@@ -29,15 +29,15 @@ If the Discord application / bot / invite are not set up yet, follow the plugin 
 
 ### a. Confirm self-hosted bridge
 
-Confirm they run a **self-hosted** wake bridge (`matthew-rutledge-dev/grok-bot-discord-bridge` or equivalent) with `CALLBACK_TOKEN` configured on the bridge process. If they only need Discord REST status/manage, skip callback setup.
+Confirm they run a **self-hosted** host bridge (for example `grok-bot-universal-bridge`'s Discord adapter, or a compatible bridge) with a callback token configured (the Discord adapter's `callbackTokenRef`). Without it the callback answers 503. If they only need Discord REST status/manage, skip callback setup.
 
 ### b. Save callback token (secret)
 
-Ask them to save Bot Secret (or plugin variable) **`DISCORD_BRIDGE_CALLBACK_TOKEN`** via the **secure secret card** — never paste the value in chat. This is the same secret the bridge uses as `CALLBACK_TOKEN`. Auth is **header-only** (bridge **0.2.4+**): `Authorization: Bearer <token>` or **`x-callback-token`** on `POST /callback`. Query `?token=` is **rejected (401)** — do not use.
+Ask them to save Bot Secret (or plugin variable) **`DISCORD_BRIDGE_CALLBACK_TOKEN`** via the **secure secret card** — never paste the value in chat. This is the same secret the bridge's `callbackTokenRef` points at. Auth is **header-only**: `Authorization: Bearer <token>` or **`x-callback-token`** on `POST /discord/callback`. Query `?token=` is **refused** (400) — do not use.
 
 ### c. Save callback URL
 
-Ask for **`DISCORD_BRIDGE_CALLBACK_URL`** — full callback URL or base ending in `/callback` for **their** bridge. Non-secret URL is OK as a plugin variable or secret. Placeholder shape only in examples: `https://callback.example.com/callback`. Never ship real operator hosts as defaults.
+Ask for **`DISCORD_BRIDGE_CALLBACK_URL`** — the full callback URL for **their** bridge (reference host bridge: `<publicBaseUrl>/discord/callback`). Non-secret URL is OK as a plugin variable or secret. Placeholder shape only in examples: `https://callback.example.com/discord/callback`. Never ship real operator hosts as defaults.
 
 ### d. Verify env names (no values)
 
@@ -58,15 +58,15 @@ Preferred probe (never echo token):
 
 ```bash
 URL="$DISCORD_BRIDGE_CALLBACK_URL"
-# Normalize: if URL does not end with /callback, append it
+# Normalize: a base URL gets the reference host bridge path appended
 case "$URL" in
   */callback) ;;
-  */) URL="${URL}callback" ;;
-  *) URL="${URL%/}/callback" ;;
+  *) URL="${URL%/}/discord/callback" ;;
 esac
 TOKEN="$DISCORD_BRIDGE_CALLBACK_TOKEN"
 code=$(curl -sS -o /dev/null -w "%{http_code}" -X POST "$URL" \
   -H "Authorization: Bearer $TOKEN" \
+  -H "User-Agent: grok-bot-bridge-client/1.0" \
   -H "Content-Type: application/json" \
   -d '{"channelId":"0","content":""}')
 echo "callback_setup http=$code token_set=yes url_set=yes"
@@ -77,7 +77,10 @@ Interpret:
 | Result | Meaning |
 |--------|---------|
 | **401** | Token rejected (wrong/missing token, or auth path reached) |
-| **400** | Token accepted path reached with bad body (probe body is intentionally invalid) |
+| **400** | Token accepted path reached with bad body (probe body is intentionally invalid: `channelId required`) |
+| **503** | Bridge has no callback token configured (`callback_disabled`); tell the bridge operator |
+| **404** | Wrong path (reference host bridge: `/discord/callback`) or the bridge's Discord adapter is off |
+| **403** `error code: 1010` | Edge blocked the request (User-Agent); not a token result |
 | Connection fail / empty / 000 | URL wrong, tunnel down, or host unreachable |
 | **2xx** | Unexpected for this minimal probe — note status; do not invent success semantics |
 
@@ -96,4 +99,4 @@ Without per-bot Secrets, self-callback will fail even if the installing host has
 - Boundary: skill `discord-fleet-boundary`
 - Bridge bring-up: skill `discord-fleet-bridge-setup` (run callback-setup after the bridge is up)
 - Wake decode / dual-deliver: skill `discord-bridge-dual-deliver` (prefer `process.env.DISCORD_BRIDGE_CALLBACK_TOKEN` + `DISCORD_BRIDGE_CALLBACK_URL`)
-- Bridge SoT: [matthew-rutledge-dev/grok-bot-discord-bridge](https://github.com/matthew-rutledge-dev/grok-bot-discord-bridge)
+- Reference host bridge: `grok-bot-universal-bridge` (Discord adapter), or any compatible host bridge

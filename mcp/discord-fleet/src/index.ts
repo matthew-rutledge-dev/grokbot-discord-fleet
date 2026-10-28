@@ -6,7 +6,7 @@
  * confirm-gated writes (post / moderation). Read-only mode
  * (DISCORD_FLEET_READ_ONLY on; unrecognised non-empty values also mean on)
  * hides write tools.
- * Not on the wake path: no sendPrompt, no gateway, no bridge /callback.
+ * Not on the wake path: no sendPrompt, no gateway, no bridge /discord/callback.
  * Token from env only.
  */
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";

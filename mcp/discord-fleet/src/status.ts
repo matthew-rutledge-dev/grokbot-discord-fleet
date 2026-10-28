@@ -18,7 +18,7 @@ import { jsonResult, type ToolResult } from "./result.js";
 import { readEnv } from "./env.js";
 import { VERSION } from "./version.js";
 
-const BRIDGE_REPO = "matthew-rutledge-dev/grok-bot-discord-bridge";
+const BRIDGE_REPO = "grok-bot-universal-bridge (Discord adapter; reference host bridge) or any compatible host bridge";
 const WAKE_HOST_HINT =
   "Use your own host and deploy path for optional bridge setup; do not deploy from this plugin";
 
@@ -177,7 +177,7 @@ export async function handleStatusTool(
       : {
           reachable: false,
           url: null as string | null,
-          note: "DISCORD_BRIDGE_HEALTH_URL unset — skip bridge probe. Bridge SoT is GET /healthz on host loopback :18083 (tunnel if remote).",
+          note: "DISCORD_BRIDGE_HEALTH_URL unset — skip bridge probe. Host bridge health is GET /healthz on host loopback (example :18090; tunnel if remote).",
         };
 
     let discord: unknown = null;
