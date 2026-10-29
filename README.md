@@ -509,7 +509,7 @@ Grok Bot boxes hibernate. While asleep the sendPrompt tunnel is down, so the bri
 
 Set up the routine with the `discord-wake-on-sleep` skill: **one routine per Grok Bot account** (all bots on an account share one box), reused if it already exists. Never commit the URL, the key, or a real automation folder id.
 
-**One webhook routine can serve both** Discord wakes and GrokBuild prompts. If the bot already has a webhook routine from [grokbuild-grokbots](https://github.com/matthew-rutledge-dev/grokbuild-grokbots) (skill `grokbots-routine-setup`), you can add the wake step to that routine's prompt instead of creating a second routine, and give the bridge the same URL and key. GrokBuild bodies always carry `kind`; the bridge's wake body (`{reason, heldCount, firstHeldAt}`) doesn't. The caller-side GrokBuild setup (`GROKBOTS_*` variables, roster file) is documented only in that repo.
+**One webhook routine can serve both** Discord wakes and GrokBuild prompts. If the bot already has a webhook routine from [grokbuild-grokbots](https://github.com/matthew-rutledge-dev/grokbuild-grokbots) (skill `grokbots-routine-setup`), you can append the wake step (`bash <absolute-plugin-root>/scripts/ensure-sendprompt-tunnel.sh` for bodies with no `kind`) to that routine's prompt instead of creating a second routine, and give the bridge the same URL and key. Follow the **Reuse path** in the `discord-wake-on-sleep` skill (step a): it still resolves the plugin root and sets `SENDPROMPT_TUNNEL_URL` from step b. GrokBuild bodies always carry `kind`; the bridge's wake body (`{reason, heldCount, firstHeldAt}`) doesn't. The caller-side GrokBuild setup (`GROKBOTS_*` variables, roster file) is documented only in that repo.
 
 **Setup flow (least user work):**
 

@@ -32,11 +32,21 @@ Operator-driven only. Never run as silent postinstall.
 ## Steps
 
 ### a. Check for an existing routine
-List the account's routines. If a webhook-triggered wake routine already exists, skip to **c**.
+List the account's routines. If a webhook-triggered routine whose prompt runs `ensure-sendprompt-tunnel.sh` already exists (a Discord-only wake routine or a shared one set up by the reuse path below), skip to **c**. A GrokBuild routine whose prompt doesn't run it yet is not a wake routine: use the reuse path.
 
-**One webhook routine can serve both** Discord wakes and GrokBuild prompts. If the bot already has a GrokBuild webhook routine (from [grokbuild-grokbots](https://github.com/matthew-rutledge-dev/grokbuild-grokbots), skill `grokbots-routine-setup`; its prompt handles `kind: "prompt"` / `kind: "wake"` bodies), you may reuse it with the user's OK instead of creating a second one: append to its prompt "If the body has no `kind` field (`reason`, `heldCount`, `firstHeldAt`), it is a Discord bridge wake: run the ensure-tunnel command below and end quietly." Then use its URL and key in steps **c** to **e**. GrokBuild's own setup (caller variables, roster file) lives only in that repo.
+**One webhook routine can serve both** Discord wakes and GrokBuild prompts. If the bot already has a GrokBuild webhook routine (from [grokbuild-grokbots](https://github.com/matthew-rutledge-dev/grokbuild-grokbots), skill `grokbots-routine-setup`; its prompt handles `kind: "prompt"` / `kind: "wake"` bodies), you may reuse it with the user's OK instead of creating a second one. **Reuse path:**
 
-### b. Create the routine (only if none exists)
+1. Do step **b**'s setup anyway, except creating the routine: resolve `<plugin-root>` to an absolute path and set `SENDPROMPT_TUNNEL_URL`. The script needs both.
+2. Append this to the existing routine's prompt, with the resolved absolute path filled in (the routine only sees its own prompt, so the command must be in it):
+
+   > If the body has no `kind` field (`reason`, `heldCount`, `firstHeldAt`), it is a Discord bridge wake: run `bash <absolute-plugin-root>/scripts/ensure-sendprompt-tunnel.sh` to bring the sendPrompt tunnel up, then end quietly. Do not message the user.
+
+   Because the prompt now runs `ensure-sendprompt-tunnel.sh`, the existing-routine check in step **a** (and in **Hard rules**) finds this shared routine next time instead of creating a duplicate.
+3. Continue with steps **c** to **e** using that routine's URL and key.
+
+GrokBuild's own setup (caller variables, roster file) lives only in that repo.
+
+### b. Create the routine (only if none exists; on the reuse path, do everything here except creating it)
 - Trigger: **webhook**.
 - Name: e.g. `discord-wake-on-sleep`.
 - Prompt (keep it short):
