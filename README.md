@@ -24,9 +24,9 @@ Do not merge this plugin into a shared general catalog without an explicit maint
 | `.grok-plugin/plugin.json` | **Primary** Grok Build / marketplace manifest (includes `variables`) |
 | `.mcp.json` | MCP server for Grok (catalog default name); one `discord-fleet` entry; env maps `${DISCORD_*}` |
 | `skills/` | Skill folders with `SKILL.md` |
-| `mcp/discord-fleet` | Local stdio MCP TypeScript sources for the single server (bootstrap runs `npm ci` + `npm run build`; hosts start `node <plugin-root>/mcp/discord-fleet/dist/index.js`; `npm test` runs the tests) |
-| `scripts/bootstrap-mcp.sh` | **Required** post-clone `npm ci` + `npm run build` (Linux / macOS / Git Bash) |
-| `scripts/bootstrap-mcp.ps1` | **Required** post-clone `npm ci` + `npm run build` on native Windows PowerShell |
+| `mcp/discord-fleet` | Local stdio MCP TypeScript sources for the single server (bootstrap runs `npm ci --omit=dev` + `npm run build`; hosts start `node <plugin-root>/mcp/discord-fleet/dist/index.js`; `npm test` runs the tests) |
+| `scripts/bootstrap-mcp.sh` | **Required** post-clone `npm ci --omit=dev` + `npm run build` (Linux / macOS / Git Bash) |
+| `scripts/bootstrap-mcp.ps1` | **Required** post-clone `npm ci --omit=dev` + `npm run build` on native Windows PowerShell |
 | `assets/logo.svg` | Marketplace logo (referenced from manifests) |
 | `.cursor-plugin/plugin.json` + `mcp.json` | Optional Cursor dual-support |
 
@@ -130,7 +130,7 @@ Re-run after pulling commits that change `mcp/discord-fleet/package-lock.json`. 
 **Upgrading from 0.3.32 or older (BREAKING):**
 
 - The MCP server names `discord-fleet-status` and `discord-fleet-manage` are replaced by one server, `discord-fleet`. Tool names are unchanged, but anything keyed to the old **server** names must be updated: MCP allowlists, auto-approve / permission rules, and host prefixes (for example Cursor shows plugin servers as `plugin-<plugin>-<server>`, so `plugin-grokbot-discord-fleet-discord-fleet-manage` becomes `plugin-grokbot-discord-fleet-discord-fleet`).
-- The old `mcp/status` and `mcp/manage` packages are gone. Hosts now launch the built `mcp/discord-fleet/dist/index.js`, which only exists after bootstrap (`npm ci` + `npm run build`). Run bootstrap once on every copy a host loads, then reload MCP servers (or restart the host).
+- The old `mcp/status` and `mcp/manage` packages are gone. Hosts now launch the built `mcp/discord-fleet/dist/index.js`, which only exists after bootstrap (`npm ci --omit=dev` + `npm run build`). Run bootstrap once on every copy a host loads, then reload MCP servers (or restart the host).
 
 ## Plugin variables (marketplace-friendly)
 
