@@ -1,6 +1,6 @@
 {
   "name": "discord-fleet-mcp",
-  "version": "0.3.36",
+  "version": "0.3.37",
   "private": true,
   "type": "module",
   "description": "MCP server: Discord fleet status + manage in one server (bridge /healthz, Discord REST reads, confirm-gated post/moderation; DISCORD_FLEET_READ_ONLY on hides writes)",

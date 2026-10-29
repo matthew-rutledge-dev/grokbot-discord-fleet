@@ -497,7 +497,7 @@ Keep the bridge loopback-only behind the tunnel, rotate the callback token (the 
 
 Standard setup step, right after bridge setup and callback setup. **Why:** Grok Bot computers sleep a lot when idle, and Discord messages alone can't wake them. Without this step, messages sent while the bot is asleep can fail after the bridge's hold window (shown as a red X in Discord). Skipping is allowed but **not recommended**.
 
-Bridge side: the reference host bridge's core wake hook (`wake.urlRef` / `wake.keyRef` / `wake.header` in its bridge config; see its design notes, **Wake-on-sleep**).
+Bridge side: the reference host bridge's core wake hook (`wake.urlRef` / `wake.keyRef` / `wake.header` in its bridge config, example in [`config/bridge.example.json`](https://github.com/matthew-rutledge-dev/grok-bot-universal-bridge/blob/main/config/bridge.example.json); see its [design notes](https://github.com/matthew-rutledge-dev/grok-bot-universal-bridge/blob/main/docs/DESIGN.md), **Wake-on-sleep**, and the [Discord adapter README](https://github.com/matthew-rutledge-dev/grok-bot-universal-bridge/blob/main/adapters/discord/README.md), which also marks it recommended). `BRIDGE_WAKE_URL` / `BRIDGE_WAKE_KEY` in its `.env` are the default ref targets; leaving them blank turns the hook off.
 
 Grok Bot boxes hibernate. While asleep the sendPrompt tunnel is down, so the bridge holds Discord messages and then red-Xes them after its hold window. The bridge's wake hook fixes this:
 
