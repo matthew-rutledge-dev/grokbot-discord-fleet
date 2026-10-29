@@ -87,7 +87,7 @@ Discord DMs are channels; there is **no** `send_dm` tool in this plugin. Use pla
 ## How
 
 1. **Confirm intent + host** — Ask which host (marketplace: **their** machine) and proceed only after explicit yes for that host. Clarify they will use **their own** Discord bot / guild.
-2. **Clone / pull the bridge** — Use a compatible host bridge, for example `grok-bot-universal-bridge` (the reference host bridge; enable its Discord adapter). On the target host, clone or `git pull` into the agreed path, keep host-only config, `registry.json` and `.env` in a sibling directory outside the checkout, and follow that bridge's README — not this plugin.
+2. **Clone / pull the bridge** — Use a compatible host bridge, for example [grok-bot-universal-bridge](https://github.com/matthew-rutledge-dev/grok-bot-universal-bridge) (the reference host bridge; enable its Discord adapter). On the target host, clone or `git pull` into the agreed path, keep host-only config, `registry.json` and `.env` in a sibling directory outside the checkout, and follow that bridge's README — not this plugin.
 3. **Env: prefer plugin vars / vault → runtime** — Load bot token and related secrets from plugin variables or the host vault injection into process env. Discourage writing a long-lived plaintext `.env` when avoidable. If the bridge docs require a host `.env`, use `.env.example` names only; never commit real `.env` or echo secret values.
 4. **Deploy / run** — Start or update per bridge README (Compose / process on **their** host). Keep service stopped until a real token is configured if the bridge docs say so.
 5. **Verify health** — Bridge HTTP is usually loopback-only. On the host: `GET http://127.0.0.1:18090/healthz` (or the port in bridge docs). From a laptop, open an SSH tunnel first, then probe the tunneled URL. The reference host bridge returns `{ok, adapters, held}`; confirm `discord` is listed in `adapters` (its `--check` run on the host reports readiness) — treat missing token or stopped Compose as evidence, not failure to invent.
@@ -119,4 +119,4 @@ Right after callback setup, run skill **`discord-wake-on-sleep`**. **Why:** Grok
 - **Required for self-callback:** skill `discord-fleet-callback-setup`
 - **Recommended next:** skill `discord-wake-on-sleep` (Wake on sleep)
 - Wake decode + delivery: compact trailer `⟂ d:<slug>:<msgId> u=… c=…` (or legacy `d:` line + thin JSON from older host bridges); skill `discord-bridge-dual-deliver` (encode for agent-to-agent context: `discord-fleet-hop-shorthand`) — Discord OUT is human text and/or allowed callback attachments (same `/discord/callback`; DMs send `channelId` = `c`)
-- Reference host bridge: `grok-bot-universal-bridge` (Discord adapter), or any compatible host bridge
+- Reference host bridge: [grok-bot-universal-bridge](https://github.com/matthew-rutledge-dev/grok-bot-universal-bridge) (Discord adapter), or any compatible host bridge

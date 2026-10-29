@@ -4,7 +4,7 @@ Plugin home for the **Discord fleet** MCP server (`discord-fleet`: status + mana
 
 **This is NOT the wake path.** Runtime wake (Gateway → `sendPrompt` / webhook) lives in a separate repo you may optionally self-host:
 
-- Host bridge (optional, your machine): a compatible self-hosted host bridge, for example `grok-bot-universal-bridge`'s Discord adapter (the reference host bridge). Wakes go Discord → host bridge → the Grok Bot Gateway (`sendPrompt` / webhook routine); this plugin is not on that path.
+- Host bridge (optional, your machine): the reference wake runtime is [grok-bot-universal-bridge](https://github.com/matthew-rutledge-dev/grok-bot-universal-bridge) with its Discord adapter enabled. Any compatible self-hosted host bridge works. Install and run it from that repo's README; the older standalone Discord bridge is superseded and is not the recommended path. Wakes go Discord → host bridge → the Grok Bot Gateway (`sendPrompt` / webhook routine); this plugin is not on that path.
 
 **Marketplace installers use their own Discord and infrastructure.** Configure **your own** Discord bot token (and optional guild / self-hosted bridge URL) via plugin variables. Host vaults and deploy paths are specific to each installation — never a shared provider.
 
@@ -349,7 +349,7 @@ Agent ids for a real roster belong in the operator's local roster file, not in t
 
 ## Bridge HTTP (reference — optional self-host)
 
-From the reference host bridge (`grok-bot-universal-bridge`, Discord adapter README):
+From the reference host bridge ([grok-bot-universal-bridge](https://github.com/matthew-rutledge-dev/grok-bot-universal-bridge), Discord adapter README):
 
 | Path | Method | Purpose |
 |------|--------|---------|

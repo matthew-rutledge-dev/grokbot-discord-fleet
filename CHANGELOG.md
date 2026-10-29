@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.35
+
+- **Install link to the reference host bridge.** Now that it is public, README, the `discord-fleet-bridge-setup` and `discord-fleet-boundary` skills, and the MCP's informational `bridgeRepo` string link to [grok-bot-universal-bridge](https://github.com/matthew-rutledge-dev/grok-bot-universal-bridge) (enable its Discord adapter) as the recommended wake runtime. The older standalone Discord bridge is superseded; historical changelog entries that mention it are unchanged.
+- No tool behavior changes. Bump manifests, MCP package, serverInfo, and Discord User-Agent to `0.3.35`.
+
 ## 0.3.34
 
 - **Host bridge pointer.** Docs, skills, manifest variable descriptions and the MCP's informational `bridgeRepo` / wake-path strings now name the reference host bridge as `grok-bot-universal-bridge` (its Discord adapter), or any compatible host bridge, instead of the previous named Discord bridge. No clickable link (that repo is not public). The wake path is unchanged: Discord → host bridge → Gateway `sendPrompt` / webhook routine; this plugin is not on it.

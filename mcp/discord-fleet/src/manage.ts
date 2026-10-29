@@ -42,7 +42,7 @@ import { readEnv } from "./env.js";
 import { describeReadOnly, type ReadOnlyResolution } from "./readonly.js";
 import { SERVER_NAME, VERSION } from "./version.js";
 
-const BRIDGE_REPO = "grok-bot-universal-bridge (Discord adapter; reference host bridge) or any compatible host bridge";
+const BRIDGE_REPO = "grok-bot-universal-bridge (Discord adapter; reference host bridge, https://github.com/matthew-rutledge-dev/grok-bot-universal-bridge) or any compatible host bridge";
 const WAKE_HOST_HINT =
   "Use your own host and deploy path for optional bridge setup; do not deploy from this plugin";
 const MSG_LIMIT_MAX = 50;
