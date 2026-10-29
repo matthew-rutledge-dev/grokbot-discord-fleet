@@ -9,7 +9,7 @@ description: Wake on sleep (recommended) — standard setup step right after bri
 
 ## When to use
 
-- Grok Bot boxes hibernate for hours; while asleep the sendPrompt tunnel is down, the bridge holds the Discord message (reference host bridge: `hold.maxSec`, default 1800 s) and then red-Xes it.
+- Grok Bot boxes hibernate for hours; while asleep the sendPrompt tunnel is down, the bridge holds the Discord message (reference host bridge: `hold.maxSec`, default 1800 s) and then red-Xes it. Bridge-side keys: `wake.urlRef` / `wake.keyRef` / `wake.header` ([example config](https://github.com/matthew-rutledge-dev/grok-bot-universal-bridge/blob/main/config/bridge.example.json), [Discord adapter README](https://github.com/matthew-rutledge-dev/grok-bot-universal-bridge/blob/main/adapters/discord/README.md)).
 - As the standard next step after bridge setup and callback setup (offer it; the operator confirms).
 - Operator asks to set up wake-on-sleep, or asks why Discord messages fail while the box sleeps.
 - If the operator declines, note that it's not recommended and that messages sent while asleep can red-X; don't push further.
