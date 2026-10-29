@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.36
+
+- **Dependency security update.** `@modelcontextprotocol/sdk` floor raised to `^1.32.2` (lockfile 1.32.2) and `npm audit fix` applied to the transitive deps: `zod` 4.6.7, `ip-address` 10.7.5, `body-parser` 2.4.0, `qs` 6.17.1, `fast-uri` 3.1.9. `npm audit` reports 0 vulnerabilities (was 6: 3 high, 3 moderate).
+- No tool behavior changes. Bump manifests, MCP package, serverInfo, and Discord User-Agent to `0.3.36`.
+
 ## 0.3.35
 
 - **Install link to the reference host bridge.** Now that it is public, README, the `discord-fleet-bridge-setup` and `discord-fleet-boundary` skills, and the MCP's informational `bridgeRepo` string link to [grok-bot-universal-bridge](https://github.com/matthew-rutledge-dev/grok-bot-universal-bridge) (enable its Discord adapter) as the recommended wake runtime. The older standalone Discord bridge is superseded; historical changelog entries that mention it are unchanged.
