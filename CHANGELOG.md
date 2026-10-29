@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.39
+
+- **GrokBuild setup lives in grokbuild-grokbots.** README ("What this plugin is", channel-map note, Wake on sleep), the `discord-fleet-boundary`, `discord-fleet-bridge-setup` and `discord-wake-on-sleep` skills now cross-link [grokbuild-grokbots](https://github.com/matthew-rutledge-dev/grokbuild-grokbots) as the single source for waking or prompting a Grok Bot from Grok Build, Cursor or a script (`GROKBOTS_*` variables, roster file). The old "operators use their own send script" line is replaced by that link. Discord-only wake docs (bridge, wake on sleep, channel map, callback) stay here.
+- **One webhook routine can serve both.** Wake on sleep notes how to reuse a GrokBuild webhook routine for Discord bridge wakes (GrokBuild bodies carry `kind`; the bridge's `{reason, heldCount, firstHeldAt}` doesn't). The skill's **Reuse path** still runs step b's plugin-root resolution and `SENDPROMPT_TUNNEL_URL` setup, and appends the literal `bash <absolute-plugin-root>/scripts/ensure-sendprompt-tunnel.sh` command, so the existing-routine check finds the shared routine later.
+- Boundary skill's manual bootstrap line says `npm ci --omit=dev` (matches 0.3.38).
+- No tool behavior changes. Bump manifests, MCP package, serverInfo, and Discord User-Agent to `0.3.39`.
+
 ## 0.3.38
 
 - `tsx` moved to `devDependencies` (only the `dev` and `test` scripts use it; hosts launch the built `dist/index.js` with plain `node`). The bootstrap scripts now run `npm ci --omit=dev`, so a plugin install no longer installs `tsx` / `esbuild` and runs no package install scripts. `typescript` and `@types/node` stay in `dependencies` because the bootstrap builds with `tsc`. README bootstrap lines updated.

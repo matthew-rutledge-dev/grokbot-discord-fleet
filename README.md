@@ -17,6 +17,8 @@ Do not merge this plugin into a shared general catalog without an explicit maint
 | `discord-fleet` MCP (one server) | Status tools: optional bridge `GET /healthz` probe + Discord REST identity/guild/channel reads. Manage tools: boundary docs, dry-run channel-map plans, Discord REST reads (inspect/resolve, message history, bot channel perms; no confirm needed) and `confirm=true`-gated writes (post message, moderation). Optional **read-only mode** (`DISCORD_FLEET_READ_ONLY` on, e.g. `1`) hides every write/moderation tool |
 | Skills | Boundary, status, manage planning, operator-driven optional bridge setup, **callback-setup** (self-callback secrets), **wake-on-sleep** (recommended), **bridge-dual-deliver** (Discord wake decode + callback), hop-shorthand encode |
 
+Not in this plugin: waking a Grok Bot or sending it a prompt from Grok Build, Cursor or a script. That's [grokbuild-grokbots](https://github.com/matthew-rutledge-dev/grokbuild-grokbots), which is the single source for that webhook setup (`GROKBOTS_WEBHOOK_URL` / `GROKBOTS_WEBHOOK_KEY` / roster file). This plugin covers the Discord side only.
+
 ## Layout (Grok-canonical)
 
 | Path | Purpose |
@@ -345,7 +347,7 @@ The live map stays on the bridge host. This plugin does not ship it. On the refe
 }
 ```
 
-Agent ids for a real roster belong in the operator's local roster file, not in this repo. To wake a bot by alias from a shell, operators use their own send script and that local file.
+Agent ids for a real roster belong in the operator's host-only bridge registry, not in this repo. To wake or prompt a bot by name from Grok Build, Cursor or a script (not through Discord), use [grokbuild-grokbots](https://github.com/matthew-rutledge-dev/grokbuild-grokbots) and its roster file; its README is the single source for that setup.
 
 ## Bridge HTTP (reference — optional self-host)
 
@@ -506,6 +508,8 @@ Grok Bot boxes hibernate. While asleep the sendPrompt tunnel is down, so the bri
 3. The routine wakes the box and runs `scripts/ensure-sendprompt-tunnel.sh`; the tunnel returns and held messages deliver.
 
 Set up the routine with the `discord-wake-on-sleep` skill: **one routine per Grok Bot account** (all bots on an account share one box), reused if it already exists. Never commit the URL, the key, or a real automation folder id.
+
+**One webhook routine can serve both** Discord wakes and GrokBuild prompts. If the bot already has a webhook routine from [grokbuild-grokbots](https://github.com/matthew-rutledge-dev/grokbuild-grokbots) (skill `grokbots-routine-setup`), you can append the wake step (`bash <absolute-plugin-root>/scripts/ensure-sendprompt-tunnel.sh` for bodies with no `kind`) to that routine's prompt instead of creating a second routine, and give the bridge the same URL and key. Follow the **Reuse path** in the `discord-wake-on-sleep` skill (step a): it still resolves the plugin root and sets `SENDPROMPT_TUNNEL_URL` from step b. GrokBuild bodies always carry `kind`; the bridge's wake body (`{reason, heldCount, firstHeldAt}`) doesn't. The caller-side GrokBuild setup (`GROKBOTS_*` variables, roster file) is documented only in that repo.
 
 **Setup flow (least user work):**
 

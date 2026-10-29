@@ -119,4 +119,5 @@ Right after callback setup, run skill **`discord-wake-on-sleep`**. **Why:** Grok
 - **Required for self-callback:** skill `discord-fleet-callback-setup`
 - **Recommended next:** skill `discord-wake-on-sleep` (Wake on sleep)
 - Wake decode + delivery: compact trailer `⟂ d:<slug>:<msgId> u=… c=…` (or legacy `d:` line + thin JSON from older host bridges); skill `discord-bridge-dual-deliver` (encode for agent-to-agent context: `discord-fleet-hop-shorthand`) — Discord OUT is human text and/or allowed callback attachments (same `/discord/callback`; DMs send `channelId` = `c`)
+- Grok Build / Cursor → Grok Bot prompts (not Discord): [grokbuild-grokbots](https://github.com/matthew-rutledge-dev/grokbuild-grokbots); one webhook routine can serve both
 - Reference host bridge: [grok-bot-universal-bridge](https://github.com/matthew-rutledge-dev/grok-bot-universal-bridge) (Discord adapter), or any compatible host bridge
