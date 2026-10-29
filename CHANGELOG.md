@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.38
+
+- `tsx` moved to `devDependencies` (only the `dev` and `test` scripts use it; hosts launch the built `dist/index.js` with plain `node`). The bootstrap scripts now run `npm ci --omit=dev`, so a plugin install no longer installs `tsx` / `esbuild` and runs no package install scripts. `typescript` and `@types/node` stay in `dependencies` because the bootstrap builds with `tsc`. README bootstrap lines updated.
+- No tool behavior changes. Bump manifests, MCP package, serverInfo, and Discord User-Agent to `0.3.38`.
+
 ## 0.3.37
 
 - **Wake on sleep (recommended): bridge-side links.** README **Wake on sleep (recommended)** and the `discord-wake-on-sleep` skill now link the reference host bridge's example config (`wake.urlRef` / `wake.keyRef` / `wake.header`), its design notes and its Discord adapter README (which now also marks the wake hook as recommended), and say that blank `BRIDGE_WAKE_URL` / `BRIDGE_WAKE_KEY` turn the hook off.
