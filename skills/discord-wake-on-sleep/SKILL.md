@@ -34,6 +34,8 @@ Operator-driven only. Never run as silent postinstall.
 ### a. Check for an existing routine
 List the account's routines. If a webhook-triggered wake routine already exists, skip to **c**.
 
+**One webhook routine can serve both** Discord wakes and GrokBuild prompts. If the bot already has a GrokBuild webhook routine (from [grokbuild-grokbots](https://github.com/matthew-rutledge-dev/grokbuild-grokbots), skill `grokbots-routine-setup`; its prompt handles `kind: "prompt"` / `kind: "wake"` bodies), you may reuse it with the user's OK instead of creating a second one: append to its prompt "If the body has no `kind` field (`reason`, `heldCount`, `firstHeldAt`), it is a Discord bridge wake: run the ensure-tunnel command below and end quietly." Then use its URL and key in steps **c** to **e**. GrokBuild's own setup (caller variables, roster file) lives only in that repo.
+
 ### b. Create the routine (only if none exists)
 - Trigger: **webhook**.
 - Name: e.g. `discord-wake-on-sleep`.
