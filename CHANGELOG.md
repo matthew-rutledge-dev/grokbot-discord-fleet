@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.37
+
+- **Wake on sleep (recommended): bridge-side links.** README **Wake on sleep (recommended)** and the `discord-wake-on-sleep` skill now link the reference host bridge's example config (`wake.urlRef` / `wake.keyRef` / `wake.header`), its design notes and its Discord adapter README (which now also marks the wake hook as recommended), and say that blank `BRIDGE_WAKE_URL` / `BRIDGE_WAKE_KEY` turn the hook off.
+- No tool behavior changes. Bump manifests, MCP package, serverInfo, and Discord User-Agent to `0.3.37`.
+
 ## 0.3.36
 
 - **Dependency security update.** `@modelcontextprotocol/sdk` floor raised to `^1.32.2` (lockfile 1.32.2) and `npm audit fix` applied to the transitive deps: `zod` 4.6.7, `ip-address` 10.7.5, `body-parser` 2.4.0, `qs` 6.17.1, `fast-uri` 3.1.9. `npm audit` reports 0 vulnerabilities (was 6: 3 high, 3 moderate).
